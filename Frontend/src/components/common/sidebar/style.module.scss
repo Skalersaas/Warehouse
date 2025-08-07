@@ -1,0 +1,5 @@
+.sidebar{
+    @include tablet {
+        border: 1px solid $main_red;
+    }
+}
