@@ -1,11 +1,21 @@
 ﻿using Domain.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System;
+using Utilities;
 
 namespace Persistence.Data;
 
-public class ApplicationContext(DbContextOptions<ApplicationContext> options)
-    : DbContext(options)
+public class ApplicationContext : DbContext
 {
+    public ApplicationContext()
+    {
+    }
+
+    public ApplicationContext(DbContextOptions<ApplicationContext> options)
+        : base(options)
+    {
+    }
+
     public DbSet<Resource> Resources { get; set; }
     public DbSet<Unit> Units { get; set; }
     public DbSet<Client> Clients { get; set; }
@@ -15,7 +25,13 @@ public class ApplicationContext(DbContextOptions<ApplicationContext> options)
     public DbSet<ShipmentDocument> ShipmentDocuments { get; set; }
     public DbSet<ShipmentItem> ShipmentItems { get; set; }
     public DbSet<Balance> Balances { get; set; }
-
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+#if DEBUG
+        EnvLoader.LoadEnvFile("../.env");
+#endif
+        optionsBuilder.UseNpgsql(Environment.GetEnvironmentVariable("ConnectionString"));
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

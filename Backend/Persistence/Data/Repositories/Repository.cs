@@ -43,30 +43,30 @@ public class Repository<T>(ApplicationContext _context) : IRepository<T>
         return await query.FirstOrDefaultAsync(predicate);
     }
 
-    public async Task<(IEnumerable<T> Data, int TotalCount)> GetListAsync(
+    public async Task<(IEnumerable<T> Data, int TotalCount)> QueryBy(
         SearchModel? model = null,
         params Expression<Func<T, object>>[] includes)
     {
         IQueryable<T> query = _set;
+        int total = 0;
 
         if (model is not null)
         {
-            query = QueryMaster<T>.FilterByFields(query, model.Filters);
+            if (model is SearchFilterModel filterModel)
+                query = QueryMaster<T>.FilterByFields(query, filterModel.Filters);
             query = QueryMaster<T>.OrderByField(query, model.SortedField, model.IsAscending);
+            total = await query.CountAsync();
+        
+            if (model.PaginationValid())
+                query = query.Skip((model.Page - 1) * model.Size).Take(model.Size);
         }
 
         foreach (var include in includes)
             query = query.Include(include);
 
-        int total = await query.CountAsync();
-
-        if (model is not null && model.PaginationValid())
-            query = query.Skip((model.Page - 1) * model.Size).Take(model.Size);
-
         var data = await query.ToListAsync();
         return (data, total);
     }
-
     public async Task<int> GetCountAsync(Expression<Func<T, bool>>? predicate = null)
     {
         return predicate is null

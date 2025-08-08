@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
+using Utilities.Responses;
 
-namespace API.Middleware;
+namespace Api.Middleware;
 
 public class ExceptionHandlingMiddleware(RequestDelegate _next, ILogger<ExceptionHandlingMiddleware> _logger)
 {
@@ -23,11 +24,11 @@ public class ExceptionHandlingMiddleware(RequestDelegate _next, ILogger<Exceptio
         if (context.Response.HasStarted)
             return;
 
-        context.Response.Clear(); // recommended to avoid mixed content
+        context.Response.Clear();
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/json";
 
-        var response = ResponseGenerator.InternalServerError();
+        var response = ApiResponseFactory.InternalServerError();
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }

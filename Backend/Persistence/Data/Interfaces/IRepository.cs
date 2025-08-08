@@ -15,8 +15,7 @@ public interface IRepository<T> where T : class, IModel
     Task<T?> GetFirstOrDefaultAsync(
         Expression<Func<T, bool>> predicate,
         params Expression<Func<T, object>>[] includes);
-
-    Task<(IEnumerable<T> Data, int TotalCount)> GetListAsync(
+    Task<(IEnumerable<T> Data, int TotalCount)> QueryBy(
         SearchModel? model = null,
         params Expression<Func<T, object>>[] includes);
 

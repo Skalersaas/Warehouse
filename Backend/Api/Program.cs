@@ -1,8 +1,12 @@
 using Api.Middleware;
+using Application.Interfaces;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
+using Persistence.Data.Interfaces;
+using Persistence.Data.Repositories;
 using Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +21,7 @@ app.Run();
 static void ConfigureBuilder(WebApplicationBuilder builder)
 {
 #if DEBUG
-    EnvLoader.LoadEnvFile(".env");
+    EnvLoader.LoadEnvFile("../.env");
 #endif
     // Db
     ConfigureDatabase(builder.Services);
@@ -73,6 +77,7 @@ static void ConfigureDatabase(IServiceCollection services)
 static void AddRepositories(IServiceCollection services)
 {
     services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+    services.AddScoped(typeof(IArchivableRepository<>), typeof(ArchivableRepository<>));
     services.AddScoped(typeof(IModelService<,,,>), typeof(ModelService<,,,>));
 }
 static void ConfigureRoutes(IServiceCollection services)

@@ -10,7 +10,7 @@ public class ShipmentDocument : IModel
     public int ClientId { get; set; }
     public DateTime Date { get; set; }
     public ShipmentStatus Status { get; set; }
-
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Client Client { get; set; }
     public ICollection<ShipmentItem> Items { get; set; } = new List<ShipmentItem>();
