@@ -1,6 +1,6 @@
-﻿namespace Utilities.DataManipulation;
+namespace Utilities.DataManipulation;
 
 public class SearchFilterModel : SearchModel
 {
-    public Dictionary<string, string> Filters { get; set; } = [];
+    public Dictionary<string, string> Filters { get; set; } = new Dictionary<string, string>();
 }

@@ -1,8 +1,7 @@
-﻿namespace Domain.Models.Enums;
-
+namespace Domain.Models.Enums;
 public enum ShipmentStatus
 {
-    Draft,
-    Signed,
-    Revoked
+    Draft = 0,
+    Signed = 1,
+    Revoked = 2
 }

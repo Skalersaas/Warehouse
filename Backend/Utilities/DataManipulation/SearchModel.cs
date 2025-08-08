@@ -1,10 +1,12 @@
-﻿namespace Utilities.DataManipulation;
+namespace Utilities.DataManipulation;
 
 public class SearchModel
 {
-    public int Size { get; set; }
-    public int Page { get; set; }
-    public string SortedField { get; set; } = string.Empty;
-    public bool IsAscending { get; set; }
-    public bool PaginationValid() => Size > 0 && Page > 0;
+    public string? SearchTerm { get; set; }
+    public string SortedField { get; set; } = "Id";
+    public bool IsAscending { get; set; } = true;
+    public int Page { get; set; } = 1;
+    public int Size { get; set; } = 10;
+
+    public bool PaginationValid() => Page > 0 && Size > 0;
 }

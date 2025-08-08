@@ -1,15 +1,11 @@
-﻿using Domain.Models.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Domain.Models.Interfaces;
 
 namespace Persistence.Data.Interfaces;
 
-public interface IArchivableRepository<T>: IRepository<T>
+public interface IArchivableRepository<T> : IRepository<T>
     where T : class, IModel, IArchivable
 {
-    Task<bool> RestoreAsync(int id);
+    Task<bool> ArchiveAsync(int id);
+    Task<bool> UnarchiveAsync(int id);
     Task<bool> HardDeleteAsync(int id);
 }

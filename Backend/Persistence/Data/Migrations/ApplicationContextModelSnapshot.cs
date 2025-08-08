@@ -31,7 +31,7 @@ namespace Persistence.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Quantity")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("ResourceId")
                         .HasColumnType("integer");
@@ -44,9 +44,10 @@ namespace Persistence.Data.Migrations
                     b.HasIndex("UnitId");
 
                     b.HasIndex("ResourceId", "UnitId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Balances_Resource_Unit");
 
-                    b.ToTable("Balances");
+                    b.ToTable("Balances", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Client", b =>
@@ -59,21 +60,36 @@ namespace Persistence.Data.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
+                    b.HasIndex("IsArchived")
+                        .HasDatabaseName("IX_Clients_IsArchived");
 
-                    b.ToTable("Clients");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Clients_Name");
+
+                    b.ToTable("Clients", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.ReceiptDocument", b =>
@@ -84,19 +100,32 @@ namespace Persistence.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Number")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Number")
-                        .IsUnique();
+                    b.HasIndex("Date")
+                        .HasDatabaseName("IX_ReceiptDocuments_Date");
 
-                    b.ToTable("ReceiptDocuments");
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ReceiptDocuments_Number");
+
+                    b.ToTable("ReceiptDocuments", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.ReceiptItem", b =>
@@ -111,7 +140,7 @@ namespace Persistence.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Quantity")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("ResourceId")
                         .HasColumnType("integer");
@@ -121,13 +150,14 @@ namespace Persistence.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocumentId");
-
                     b.HasIndex("ResourceId");
 
                     b.HasIndex("UnitId");
 
-                    b.ToTable("ReceiptItems");
+                    b.HasIndex("DocumentId", "ResourceId", "UnitId")
+                        .HasDatabaseName("IX_ReceiptItems_Document_Resource_Unit");
+
+                    b.ToTable("ReceiptItems", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Resource", b =>
@@ -138,19 +168,33 @@ namespace Persistence.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
+                    b.HasIndex("IsArchived")
+                        .HasDatabaseName("IX_Resources_IsArchived");
 
-                    b.ToTable("Resources");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Resources_Name");
+
+                    b.ToTable("Resources", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.ShipmentDocument", b =>
@@ -164,24 +208,42 @@ namespace Persistence.Data.Migrations
                     b.Property<int>("ClientId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Number")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("Number")
-                        .IsUnique();
+                    b.HasIndex("Date")
+                        .HasDatabaseName("IX_ShipmentDocuments_Date");
 
-                    b.ToTable("ShipmentDocuments");
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ShipmentDocuments_Number");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_ShipmentDocuments_Status");
+
+                    b.ToTable("ShipmentDocuments", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.ShipmentItem", b =>
@@ -196,7 +258,7 @@ namespace Persistence.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Quantity")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("ResourceId")
                         .HasColumnType("integer");
@@ -206,13 +268,14 @@ namespace Persistence.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocumentId");
-
                     b.HasIndex("ResourceId");
 
                     b.HasIndex("UnitId");
 
-                    b.ToTable("ShipmentItems");
+                    b.HasIndex("DocumentId", "ResourceId", "UnitId")
+                        .HasDatabaseName("IX_ShipmentItems_Document_Resource_Unit");
+
+                    b.ToTable("ShipmentItems", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Unit", b =>
@@ -223,33 +286,47 @@ namespace Persistence.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
+                    b.HasIndex("IsArchived")
+                        .HasDatabaseName("IX_Units_IsArchived");
 
-                    b.ToTable("Units");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Units_Name");
+
+                    b.ToTable("Units", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Balance", b =>
                 {
                     b.HasOne("Domain.Models.Entities.Resource", "Resource")
-                        .WithMany()
+                        .WithMany("Balances")
                         .HasForeignKey("ResourceId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Unit", "Unit")
-                        .WithMany()
+                        .WithMany("Balances")
                         .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Resource");
@@ -266,13 +343,13 @@ namespace Persistence.Data.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Resource", "Resource")
-                        .WithMany()
+                        .WithMany("ReceiptItems")
                         .HasForeignKey("ResourceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Unit", "Unit")
-                        .WithMany()
+                        .WithMany("ReceiptItems")
                         .HasForeignKey("UnitId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -287,7 +364,7 @@ namespace Persistence.Data.Migrations
             modelBuilder.Entity("Domain.Models.Entities.ShipmentDocument", b =>
                 {
                     b.HasOne("Domain.Models.Entities.Client", "Client")
-                        .WithMany()
+                        .WithMany("ShipmentDocuments")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -304,13 +381,13 @@ namespace Persistence.Data.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Resource", "Resource")
-                        .WithMany()
+                        .WithMany("ShipmentItems")
                         .HasForeignKey("ResourceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Unit", "Unit")
-                        .WithMany()
+                        .WithMany("ShipmentItems")
                         .HasForeignKey("UnitId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -322,14 +399,37 @@ namespace Persistence.Data.Migrations
                     b.Navigation("Unit");
                 });
 
+            modelBuilder.Entity("Domain.Models.Entities.Client", b =>
+                {
+                    b.Navigation("ShipmentDocuments");
+                });
+
             modelBuilder.Entity("Domain.Models.Entities.ReceiptDocument", b =>
                 {
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("Domain.Models.Entities.Resource", b =>
+                {
+                    b.Navigation("Balances");
+
+                    b.Navigation("ReceiptItems");
+
+                    b.Navigation("ShipmentItems");
+                });
+
             modelBuilder.Entity("Domain.Models.Entities.ShipmentDocument", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Domain.Models.Entities.Unit", b =>
+                {
+                    b.Navigation("Balances");
+
+                    b.Navigation("ReceiptItems");
+
+                    b.Navigation("ShipmentItems");
                 });
 #pragma warning restore 612, 618
         }
