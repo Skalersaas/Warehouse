@@ -1,0 +1,54 @@
+.dashboard-container {
+  display: flex;
+  gap: 12px;
+  padding-right: 40px;
+  @include tablet {
+    flex-direction: column;
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    max-height: calc(100vh - 90px);
+    @include height_mobile {
+      max-height: calc(550px - 100px);
+    }
+  }
+  @include lg_mobile {
+    padding-left: 40px;
+  }
+  transition: all 0.6s ease-in-out;
+  @include mobile {
+    padding: 0 20px;
+  }
+  .delivery-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding-bottom: 18px;
+    @include md_desktop {
+      &-loader {
+        display: none;
+      }
+      margin-top: 84px;
+    }
+    @include tablet {
+      margin-top: 0;
+      overflow: initial;
+    }
+    &-header {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      transition: all 0.3s ease-in;
+      @include md_desktop {
+        flex-direction: column;
+      }
+      @include tablet {
+        margin-top: 0;
+      }
+    }
+  }
+}

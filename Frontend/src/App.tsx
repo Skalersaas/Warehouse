@@ -1,15 +1,8 @@
-import Sidebar from "./components/common/sidebar"
+import { RouterProvider } from "react-router-dom";
+import router from "./routes/root";
 
 function App() {
-
-  return (
-  <div>
-    <Sidebar/>
-    <div>
-      <h1>Home page</h1>
-    </div>
-  </div>
-  )
+ return <RouterProvider router={router} />;
 }
 
-export default App
+export default App;

@@ -1,0 +1,186 @@
+.tracking__delivery {
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  margin-top: 8px;
+  &--map {
+    width: 100%;
+    height: 100%;
+    @include tablet {
+      min-height: 300px;
+    }
+    @include md_desktop {
+      @include height_tablet {
+        min-height: 360px;
+      }
+    }
+  }
+  &--card {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: $main_white;
+    padding: 28px 20px 10px 20px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: calc(100% - 76px);
+    max-width: 300px;
+    transition: all 1s ease-in-out;
+    @include md_desktop {
+      max-width: 200px;
+      height: 170px;
+      top: 10px;
+      left: 10px;
+      padding-top: 20px;
+      gap: 12px;
+      max-width: 160px;
+    }
+    &--close {
+      background-color: $second_blue;
+      color: $main_blue;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      padding: 2px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 9;
+    }
+    &--title {
+      opacity: 1;
+      transition: all 1s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      &--text {
+        font-size: 22px;
+        font-weight: 600;
+        transition: all 1s ease-in-out;
+        @include md_desktop {
+          font-size: 16px;
+        }
+      }
+      &--number {
+        color: $second_sub_text_gray;
+        transition: all 1s ease-in-out;
+        @include md_desktop {
+          font-size: 14px;
+        }
+      }
+    }
+    .inactive--title {
+      transition: all 1s ease-in-out;
+      opacity: 0;
+    }
+    &--track {
+      transition: all 1s ease-in-out;
+      overflow-y: auto;
+      opacity: 1;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      &--default {
+        display: flex;
+        gap: 20px;
+        transition: all 1s ease-in-out;
+        @include md_desktop {
+          gap: 12px;
+        }
+        &--status {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          &--icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: $main_gray;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: $main_white;
+            padding: 4px;
+          }
+          &--line {
+            width: 0px;
+            border: 1px solid $main_gray;
+            height: 50px;
+            transition: all 1s ease-in-out;
+            @include md_desktop {
+              height: 40px;
+            }
+          }
+        }
+        &--detail {
+          width: 100%;
+          &--text {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+          }
+          &--client {
+            font-weight: 600;
+            transition: all 1s ease-in-out;
+            max-width: 100px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-size: 14px;
+          }
+          &--date {
+            color: $second_sub_text_gray;
+            font-size: 12px;
+            font-weight: 400;
+          }
+          &--resources {
+            color: $second_sub_text_gray;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: all 1s ease-in-out;
+            @include md_desktop {
+              font-size: 14px;
+            }
+          }
+        }
+      }
+      .active__status {
+        &--icon {
+          background-color: $main_blue;
+          color: $main_white;
+        }
+        &--line {
+          border: 1px dashed $main_blue;
+        }
+      }
+    }
+    .inactive--track {
+      transition: all 1s ease-in-out;
+      opacity: 0;
+    }
+  }
+  &--inactive--card {
+    transition: all 1s ease-in-out;
+    height: 7px;
+    max-width: 7px;
+    border-radius: 30px;
+    @include md_desktop {
+      border-radius: 50%;
+      height: 14px;
+      max-width: 7px;
+    }
+  }
+}

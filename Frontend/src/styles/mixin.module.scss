@@ -13,6 +13,21 @@ $screen-lg-mobile: 610px;
 $screen-mobile: 500px;
 $screen-sm-mobile: 400px;
 
+$screen-height: 880px;
+$screen-sm-height: 550px;
+
+@mixin height_tablet{
+    @media (max-height: #{$screen-height}) {
+        @content;
+    }
+}
+
+@mixin height_mobile{
+    @media (max-height: #{$screen-sm-height}) {
+        @content;
+    }
+}
+
 @mixin l_desktop{
     @media (max-width: #{$screen-l-desktop}) {
         @content;

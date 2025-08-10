@@ -1,5 +1,139 @@
-.sidebar{
-    @include tablet {
-        border: 1px solid $main_red;
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 200px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 30px 80px 20px 20px;
+  background-color: transparent;
+  height: calc(100% - 50px);
+  transition: all 0.6s ease-in-out;
+  @include desktop {
+    padding: 30px 20px 20px 20px;
+    width: 60px;
+  }
+  @include lg_mobile {
+    padding-right: 10px;
+    background-color: #ebf1f86b;
+    z-index: 8;
+    backdrop-filter: blur(3px);
+    border-right: 1px solid $main_blue;
+  }
+    @include height_mobile {
+    min-height: 500px;
+  }
+  &--icon {
+    display: none;
+    @include lg_mobile {
+      display: block;
+      position: absolute;
+      top: 36px;
+      left: 32px;
+      cursor: pointer;
     }
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    transition: all 0.6s ease-in-out;
+    @include desktop {
+      width: fit-content;
+    }
+    &__header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 20px;
+      cursor: pointer;
+      transition: all 0.6s ease-in-out;
+      @include desktop {
+        gap: 0;
+        margin-left: 0;
+        justify-content: center;
+      }
+      &--logo {
+        @include lg_mobile {
+          display: none;
+        }
+      }
+      &--name {
+        font-size: 22px;
+        font-weight: 500;
+        opacity: 1;
+        transition: all 0.6s ease-in-out;
+        @include desktop {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+        }
+      }
+    }
+
+    &__body {
+      &--links {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        &--link {
+          display: flex;
+          align-items: center;
+          color: $first_sub_text_gray;
+          text-decoration: none;
+          gap: 12px;
+          padding: 8px 12px;
+          border-radius: 20px;
+          border: 1px solid transparent;
+          font-size: 14px;
+          transition: all 0.3s ease-in-out;
+          @include desktop {
+            gap: 0;
+            padding: 8px;
+            border-radius: 30px;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+          }
+          &--name {
+            opacity: 1;
+            transition: all 0.6s ease-in-out;
+            @include desktop {
+              opacity: 0;
+              width: 0;
+              overflow: hidden;
+            }
+          }
+          &:hover {
+            background-color: $second_blue;
+            border-color: $main_blue;
+            color: $main_blue;
+          }
+        }
+        .active {
+          background-color: $main_blue;
+          color: $main_bg_gradient_first;
+        }
+      }
+    }
+    &__footer {
+      &--text {
+        color: $second_sub_text_gray;
+        font-size: 13px;
+      }
+    }
+  }
+  .inactive--sidebar {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+  }
+}
+.inactive--sidebar-container {
+  border: none;
+  @include lg_mobile {
+    width: 0;
+    padding: 0;
+  }
 }
