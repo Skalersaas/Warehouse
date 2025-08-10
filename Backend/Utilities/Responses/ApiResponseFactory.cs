@@ -9,18 +9,6 @@ namespace Utilities.Responses;
 public class ApiResponseFactory
 {
     /// <summary>
-    /// Creates a 201 Created response.
-    /// </summary>
-    /// <typeparam name="T">The type of data to include in the response.</typeparam>
-    /// <param name="data">The data to include in the response.</param>
-    /// <returns>An ObjectResult with 201 Created status code.</returns>
-    public static ObjectResult Created<T>(T data)
-    {
-        var response = ApiResponse<T>.SuccessResponse(data, null);
-        return new(response) { StatusCode = StatusCodes.Status201Created };
-    }
-
-    /// <summary>
     /// Creates a successful response with 200 OK status code.
     /// </summary>
     /// <typeparam name="T">The type of data to include in the response.</typeparam>

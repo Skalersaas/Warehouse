@@ -1,85 +1,126 @@
-using Domain.Models.Entities;
+﻿using Domain.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.PostgresTypes;
-using Persistence.Data.Configurations;
+using System;
 using Utilities;
 
 namespace Persistence.Data;
 
 public class ApplicationContext : DbContext
 {
-    public ApplicationContext() { }
-    public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options) { }
-
-    public DbSet<Client> Clients { get; set; }
-    public DbSet<Resource> Resources { get; set; }
-    public DbSet<Unit> Units { get; set; }
-    public DbSet<Balance> Balances { get; set; }
-    public DbSet<ReceiptDocument> ReceiptDocuments { get; set; }
-    public DbSet<ReceiptItem> ReceiptItems { get; set; }
-    public DbSet<ShipmentDocument> ShipmentDocuments { get; set; }
-    public DbSet<ShipmentItem> ShipmentItems { get; set; }
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    public ApplicationContext()
     {
-        if (!optionsBuilder.IsConfigured)
-        {
-#if DEBUG
-            foreach (var path in new[] { ".env", "../.env" })
-            {
-                if (File.Exists(path))
-                {
-                    EnvLoader.LoadEnvFile(path);
-                    break;
-                }
-            }
-#endif
-            optionsBuilder.UseNpgsql(Environment.GetEnvironmentVariable("ConnectionString"));
-        }
     }
 
+    public ApplicationContext(DbContextOptions<ApplicationContext> options)
+        : base(options)
+    {
+    }
+
+    public DbSet<Resource> Resources { get; set; }
+    public DbSet<Unit> Units { get; set; }
+    public DbSet<Client> Clients { get; set; }
+    public DbSet<ReceiptDocument> ReceiptDocuments { get; set; }
+    public DbSet<ReceiptItem> ReceiptItems { get; set; }
+
+    public DbSet<ShipmentDocument> ShipmentDocuments { get; set; }
+    public DbSet<ShipmentItem> ShipmentItems { get; set; }
+    public DbSet<Balance> Balances { get; set; }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+#if DEBUG
+        EnvLoader.LoadEnvFile("../.env");
+#endif
+        optionsBuilder.UseNpgsql(Environment.GetEnvironmentVariable("ConnectionString"));
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Apply all configurations
-        modelBuilder.ApplyConfiguration(new ClientConfiguration());
-        modelBuilder.ApplyConfiguration(new ResourceConfiguration());
-        modelBuilder.ApplyConfiguration(new UnitConfiguration());
-        modelBuilder.ApplyConfiguration(new BalanceConfiguration());
-        modelBuilder.ApplyConfiguration(new ReceiptDocumentConfiguration());
-        modelBuilder.ApplyConfiguration(new ReceiptItemConfiguration());
-        modelBuilder.ApplyConfiguration(new ShipmentDocumentConfiguration());
-        modelBuilder.ApplyConfiguration(new ShipmentItemConfiguration());
+        modelBuilder.Entity<Resource>()
+            .HasIndex(r => r.Name)
+            .IsUnique();
+        modelBuilder.Entity<Resource>()
+            .Property(r => r.Name)
+            .IsRequired();
 
-        // Global query filters for archived entities (soft delete)
-        modelBuilder.Entity<Client>().HasQueryFilter(e => !e.IsArchived);
-        modelBuilder.Entity<Resource>().HasQueryFilter(e => !e.IsArchived);
-        modelBuilder.Entity<Unit>().HasQueryFilter(e => !e.IsArchived);
-    }
+        modelBuilder.Entity<Unit>()
+            .HasIndex(u => u.Name)
+            .IsUnique();
+        modelBuilder.Entity<Unit>()
+            .Property(u => u.Name)
+            .IsRequired();
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        UpdateTimestamps();
-        return await base.SaveChangesAsync(cancellationToken);
-    }
+        modelBuilder.Entity<Client>()
+            .HasIndex(c => c.Name)
+            .IsUnique();
+        modelBuilder.Entity<Client>()
+            .Property(c => c.Name)
+            .IsRequired();
 
-    public override int SaveChanges()
-    {
-        UpdateTimestamps();
-        return base.SaveChanges();
-    }
+        modelBuilder.Entity<Balance>()
+            .HasIndex(b => new { b.ResourceId, b.UnitId })
+            .IsUnique();
 
-    private void UpdateTimestamps()
-    {
-        var entries = ChangeTracker.Entries()
-            .Where(e => e.State == EntityState.Modified);
+        modelBuilder.Entity<Balance>()
+            .HasOne(b => b.Resource)
+            .WithMany()
+            .HasForeignKey(b => b.ResourceId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        foreach (var entry in entries)
-        {
-            if (entry.Entity.GetType().GetProperty("UpdatedAt") != null)
-            {
-                entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
-            }
-        }
+        modelBuilder.Entity<Balance>()
+            .HasOne(b => b.Unit)
+            .WithMany()
+            .HasForeignKey(b => b.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReceiptDocument>()
+            .HasIndex(rd => rd.Number)
+            .IsUnique();
+
+        modelBuilder.Entity<ReceiptItem>()
+            .HasOne(ri => ri.Document)
+            .WithMany(rd => rd.Items)
+            .HasForeignKey(ri => ri.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ReceiptItem>()
+            .HasOne(ri => ri.Resource)
+            .WithMany()
+            .HasForeignKey(ri => ri.ResourceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ReceiptItem>()
+            .HasOne(ri => ri.Unit)
+            .WithMany()
+            .HasForeignKey(ri => ri.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ShipmentDocument>()
+            .HasIndex(sd => sd.Number)
+            .IsUnique();
+
+        modelBuilder.Entity<ShipmentDocument>()
+            .HasOne(sd => sd.Client)
+            .WithMany()
+            .HasForeignKey(sd => sd.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ShipmentItem>()
+            .HasOne(si => si.Document)
+            .WithMany(sd => sd.Items)
+            .HasForeignKey(si => si.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ShipmentItem>()
+            .HasOne(si => si.Resource)
+            .WithMany()
+            .HasForeignKey(si => si.ResourceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ShipmentItem>()
+            .HasOne(si => si.Unit)
+            .WithMany()
+            .HasForeignKey(si => si.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

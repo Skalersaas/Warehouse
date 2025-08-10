@@ -16,9 +16,5 @@
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
     <ProjectReference Include="..\Utilities\Utilities.csproj" />
   </ItemGroup>
-<ItemGroup>
-	<None Include="..\.env" Link=".env">
-		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</None>
-</ItemGroup>
+
 </Project>
