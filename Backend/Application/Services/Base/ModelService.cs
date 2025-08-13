@@ -3,7 +3,7 @@ using Domain.Models.Interfaces;
 using Persistence.Data.Interfaces;
 using Utilities.DataManipulation;
 
-namespace Application.Services
+namespace Application.Services.Base
 {
     public class ModelService<TModel, TCreate, TUpdate, TResponse>(IRepository<TModel> context) : IModelService<TModel, TCreate, TUpdate, TResponse>
         where TModel : class, IModel, new()
@@ -29,11 +29,11 @@ namespace Application.Services
                 ? (false, null)
                 : (true, Mapper.FromDTO<TResponse, TModel>(model));
         }
-        public virtual async Task<(TResponse[], int)> QueryBy(SearchModel model)
+        public virtual async Task<(IEnumerable<TResponse>, int)> QueryBy(SearchModel model)
         {
             var (data, fullCount) = await repo.QueryBy(model);
 
-            var responseList = data.Select(Mapper.FromDTO<TResponse, TModel>).ToArray();
+            var responseList = data.Select(Mapper.FromDTO<TResponse, TModel>);
 
             return (responseList, fullCount);
         }

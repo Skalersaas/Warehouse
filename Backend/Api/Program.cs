@@ -1,6 +1,6 @@
 using Api.Middleware;
 using Application.Interfaces;
-using Application.Services;
+using Application.Services.Base;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
