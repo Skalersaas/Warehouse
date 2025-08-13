@@ -1,11 +1,20 @@
-﻿using Domain.Models.Interfaces;
+using System.ComponentModel.DataAnnotations;
 
 namespace Application.Models.ReceiptItem;
 
-public class ReceiptItemUpdateDto : IModel
+public class UpdateReceiptItemDto
 {
     public int Id { get; set; }
+    
+    [Required]
+    [Range(1, int.MaxValue)]
     public int ResourceId { get; set; }
+    
+    [Required]
+    [Range(1, int.MaxValue)]
     public int UnitId { get; set; }
+    
+    [Required]
+    [Range(0.001, double.MaxValue)]
     public decimal Quantity { get; set; }
 }

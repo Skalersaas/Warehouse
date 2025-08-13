@@ -1,6 +1,6 @@
-﻿namespace Application.Models.Balance;
+namespace Application.Models.Balance;
 
-public class BalanceCreateDto
+public class BalanceUpdateDto
 {
     public int Id { get; set; }
     public int ResourceId { get; set; }

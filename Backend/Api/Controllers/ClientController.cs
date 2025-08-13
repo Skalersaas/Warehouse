@@ -6,6 +6,6 @@ using Domain.Models.Entities;
 namespace Api.Controllers;
 
 public class ClientController(ClientService service): 
-    ArchiveController<Client, ClientCreateDto, ClientUpdateDto, ClientResponseDto>(service)
+    ArchiveController<Client, CreateClientDto, UpdateClientDto, ClientResponseDto>(service)
 {
 }

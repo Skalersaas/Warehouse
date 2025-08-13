@@ -8,6 +8,7 @@ public class ReceiptDocument : IModel
     public string Number { get; set; } = null!;
     public DateTime Date { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     public ICollection<ReceiptItem> Items { get; set; } = new List<ReceiptItem>();
 }

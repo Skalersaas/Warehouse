@@ -5,7 +5,7 @@ using Utilities.Responses;
 
 namespace Api.Controllers.Base;
 
-public class ArchiveController<TModel, TCreate, TUpdate, TResponse>(IArchiveService<TModel, TCreate, TUpdate, TResponse> service) : 
+public class ArchiveController<TModel, TCreate, TUpdate, TResponse>(IArchiveService<TModel, TCreate, TUpdate> service) : 
     CrudController<TModel, TCreate, TUpdate, TResponse>(service)
 
         where TModel : class, IArchivable, IModel, new()
@@ -13,7 +13,7 @@ public class ArchiveController<TModel, TCreate, TUpdate, TResponse>(IArchiveServ
         where TUpdate : class, IModel
         where TResponse : class, new()
 {
-    protected IArchiveService<TModel, TCreate, TUpdate, TResponse> _service = service;
+    protected IArchiveService<TModel, TCreate, TUpdate> _service = service;
     [HttpPatch("{id}/archive")]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
     public async Task<ObjectResult> Archive(int id)

@@ -1,12 +1,20 @@
-﻿using Application.Models.ReceiptItem;
+using System.ComponentModel.DataAnnotations;
+using Application.Models.ReceiptItem;
 using Domain.Models.Interfaces;
 
 namespace Application.Models.ReceiptDocument;
 
-public class ReceiptDocumentUpdateDto : IModel
+public class UpdateReceiptDocumentDto : IModel
 {
+    [Required]
     public int Id { get; set; }
+    
+    [Required]
+    [MaxLength(50)]
     public string Number { get; set; } = string.Empty;
+    
+    [Required]
     public DateTime Date { get; set; }
-    public IEnumerable<ReceiptItemUpdateDto> Items { get; set; } = [];
+    
+    public IEnumerable<UpdateReceiptItemDto>? Items { get; set; }
 }

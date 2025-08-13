@@ -10,14 +10,14 @@ namespace Api.Controllers.Base
     [ApiController]
     [ModelValidation]
     [Route("[controller]")]
-    public abstract class CrudController<TModel, TCreate, TUpdate, TResponse>(IModelService<TModel, TCreate, TUpdate, TResponse> service)
+    public abstract class CrudController<TModel, TCreate, TUpdate, TResponse>(IModelService<TModel, TCreate, TUpdate> service)
         : ControllerBase
         where TModel : class, IModel, new()
         where TCreate : class
         where TUpdate : class, IModel
         where TResponse : class, new()
     {
-        protected IModelService<TModel, TCreate, TUpdate, TResponse> _service = service;
+        protected IModelService<TModel, TCreate, TUpdate> _service = service;
         [HttpPost]
         [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
         public virtual async Task<ObjectResult> Create([FromBody] TCreate entity)
@@ -25,8 +25,8 @@ namespace Api.Controllers.Base
             var (suceed, result) = await _service.CreateAsync(entity);
 
             return suceed
-                ? ApiResponseFactory.Ok(result)
-                : ApiResponseFactory.BadRequest("Entity with such Id exists");
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
+                : ApiResponseFactory.BadRequest("Entity with such Number exists");
         }
         [HttpGet("{id}")]
         [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
@@ -35,7 +35,7 @@ namespace Api.Controllers.Base
             var (succeed, result) = await _service.GetByIdAsync(id);
 
             return succeed
-                ? ApiResponseFactory.Ok(result)
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
                 : ApiResponseFactory.NotFound("Entity with such Id was not found");
         }
         [HttpGet]
@@ -44,14 +44,18 @@ namespace Api.Controllers.Base
         public virtual async Task<ObjectResult> GetAll([FromBody] SearchModel model)
         {
             var (data, fullCount) = await _service.QueryBy(model);
-            return ApiResponseFactory.Ok(data, fullCount);
+
+            var responseData = data.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
+            return ApiResponseFactory.Ok(responseData, fullCount);
         }
         [HttpPost("query")]
         [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
         public virtual async Task<ObjectResult> Query([FromBody] SearchFilterModel model)
         {
             var (data, fullCount) = await _service.QueryBy(model);
-            return ApiResponseFactory.Ok(data, fullCount);
+
+            var responseData = data.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
+            return ApiResponseFactory.Ok(responseData, fullCount);
         }
         [HttpPut]
         [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
@@ -60,7 +64,7 @@ namespace Api.Controllers.Base
             var (succeed, result) = await _service.UpdateAsync(entity);
 
             return succeed
-                ? ApiResponseFactory.Ok(result)
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
                 : ApiResponseFactory.BadRequest("Entity with such GUID exists");
         }
         [HttpDelete("{id}")]

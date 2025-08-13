@@ -6,18 +6,26 @@ using Microsoft.AspNetCore.Mvc;
 using Utilities.Responses;
 namespace Api.Controllers;
 
-public class ShipmentDocumentController(ShipmentDocumentService service) : CrudController<ShipmentDocument, ShipmentDocumentCreateDto, ShipmentDocumentUpdateDto, ShipmentDocumentResponseDto>(service)
+public class ShipmentDocumentController(ShipmentDocumentService service) : CrudController<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto, ShipmentDocumentResponseDto>(service)
 {
     [HttpPatch("{id}/sign")]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
-    public async Task<ObjectResult> Archive(int id)
+    public async Task<ObjectResult> Sign(int id)
     {
-        throw new NotImplementedException("Archive method is not implemented yet.");
+        var (success, message) = await service.Sign(id);
+
+        return success 
+            ? ApiResponseFactory.Ok(message) 
+            : ApiResponseFactory.BadRequest(message);
     }
     [HttpPatch("{id}/revoke")]
     [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
     public async Task<ObjectResult> Revoke(int id)
     {
-        throw new NotImplementedException("Revoke method is not implemented yet.");
+        var (success, message) = await service.Revoke(id);
+
+        return success 
+            ? ApiResponseFactory.Ok(message) 
+            : ApiResponseFactory.BadRequest(message);
     }
 }

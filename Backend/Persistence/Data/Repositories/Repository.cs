@@ -13,9 +13,17 @@ public class Repository<T>(ApplicationContext _context) : IRepository<T>
 
     public virtual async Task<T?> CreateAsync(T entity)
     {
-        await _set.AddAsync(entity);
-        await _context.SaveChangesAsync();
-        return entity;
+        try
+        {
+            await _set.AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return entity;
+        }
+        catch
+        {
+            _context.Entry(entity).State = EntityState.Detached;
+            return null;
+        }
     }
 
     public async Task<T?> GetByIdAsync(int id)
@@ -74,13 +82,17 @@ public class Repository<T>(ApplicationContext _context) : IRepository<T>
             : await _set.CountAsync(predicate);
     }
 
-    public virtual async Task<T> UpdateAsync(T entity)
+    public virtual async Task<T?> UpdateAsync(T entity)
     {
-        _set.Update(entity);
-        await _context.SaveChangesAsync();
-        return entity;
-    }
+        var existing = await GetByIdAsync(entity.Id);
+        if (existing == null)
+            return null;
 
+        _context.Entry(existing).CurrentValues.SetValues(entity);
+
+        await _context.SaveChangesAsync();
+        return existing;
+    }
     public virtual async Task<bool> DeleteAsync(int id)
     {
         var entity = await GetByIdAsync(id);

@@ -4,10 +4,9 @@ using Persistence.Data.Interfaces;
 
 namespace Application.Services.Base;
 
-public class ArchiveService<TModel, TCreate, TUpdate, TResponse>(IRepository<TModel> _context)
-    : ModelService<TModel, TCreate, TUpdate, TResponse>(_context), IArchiveService<TModel, TCreate, TUpdate, TResponse>
+public class ArchiveService<TModel, TCreate, TUpdate>(IRepository<TModel> _context)
+    : ModelService<TModel, TCreate, TUpdate>(_context), IArchiveService<TModel, TCreate, TUpdate>
     where TModel : class, IArchivable, IModel, new()
-    where TResponse : class, new()
 {
     protected readonly IRepository<TModel> _context = _context;
     public virtual async Task<bool> ArchiveAsync(int id)

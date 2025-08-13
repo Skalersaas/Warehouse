@@ -5,7 +5,7 @@ using Persistence.Data.Interfaces;
 
 namespace Application.Services;
 
-public class ClientService(IRepository<Client> clients) : ArchiveService<Client, ClientCreateDto, ClientUpdateDto, ClientResponseDto>(clients)
+public class ClientService(IRepository<Client> clients) : ArchiveService<Client, CreateClientDto, UpdateClientDto>(clients)
 {
 
 }

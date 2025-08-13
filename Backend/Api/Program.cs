@@ -1,5 +1,6 @@
 using Api.Middleware;
 using Application.Interfaces;
+using Application.Services;
 using Application.Services.Base;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
@@ -33,7 +34,7 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
     ConfigureSwagger(builder.Services);
 
     // Repos
-    AddRepositories(builder.Services);
+    AddScoped(builder.Services);
     builder.Services.AddAuthorization();
 }
 static void ConfigureApp(WebApplication app)
@@ -74,11 +75,23 @@ static void ConfigureDatabase(IServiceCollection services)
     string? cs = Environment.GetEnvironmentVariable("ConnectionString");
     services.AddDbContext<ApplicationContext>(options => options.UseNpgsql(cs));
 }
-static void AddRepositories(IServiceCollection services)
+static void AddScoped(IServiceCollection services)
 {
+    // Repositories
     services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
     services.AddScoped(typeof(IArchivableRepository<>), typeof(ArchivableRepository<>));
-    services.AddScoped(typeof(IModelService<,,,>), typeof(ModelService<,,,>));
+    
+    // Base Services
+    services.AddScoped(typeof(IModelService<,,>), typeof(ModelService<,,>));
+    services.AddScoped(typeof(IArchiveService<,,>), typeof(ArchiveService<,,>));
+    
+    // Specific Services
+    services.AddScoped<BalanceService>();
+    services.AddScoped<ResourceService>();
+    services.AddScoped<UnitService>();
+    services.AddScoped<ClientService>();
+    services.AddScoped<ReceiptDocumentService>();
+    services.AddScoped<ShipmentDocumentService>();
 }
 static void ConfigureRoutes(IServiceCollection services)
 {

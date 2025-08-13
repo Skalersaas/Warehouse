@@ -1,6 +1,6 @@
-﻿namespace Application.Models.ReceiptItem;
+namespace Application.Models.Balance;
 
-public class ReceiptItemResponseDto
+public class BalanceResponseDto
 {
     public int Id { get; set; }
     public int ResourceId { get; set; }

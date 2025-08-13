@@ -1,8 +1,22 @@
-﻿namespace Application.Models.ShipmentDocument;
+using System.ComponentModel.DataAnnotations;
+using Application.Models.ShipmentItem;
 
-public class ShipmentDocumentCreateDto
+namespace Application.Models.ShipmentDocument;
+
+public class CreateShipmentDocumentDto
 {
-    public int ResourceId { get; set; }
-    public int UnitId { get; set; }
-    public int Quantity { get; set; }
+    [Required]
+    [MaxLength(50)]
+    public string Number { get; set; } = string.Empty;
+    
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int ClientId { get; set; }
+    
+    [Required]
+    public DateTime Date { get; set; }
+    
+    [Required]
+    [MinLength(1)]
+    public ICollection<CreateShipmentItemDto> Items { get; set; } = [];
 }

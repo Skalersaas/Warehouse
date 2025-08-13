@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Application.Models.ReceiptItem;
+namespace Application.Models.ShipmentItem;
 
-public class CreateReceiptItemDto
+public class UpdateShipmentItemDto
 {
+    public int Id { get; set; }
+    
     [Required]
     [Range(1, int.MaxValue)]
     public int ResourceId { get; set; }

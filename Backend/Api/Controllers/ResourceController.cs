@@ -6,6 +6,6 @@ using Domain.Models.Entities;
 namespace Api.Controllers;
 
 public class ResourceController(ResourceService service) 
-    : ArchiveController<Resource, ResourceCreateDto, ResourceUpdateDto, ResourceResponseDto>(service)
+    : ArchiveController<Resource, CreateResourceDto, UpdateResourceDto, ResourceResponseDto>(service)
 {
 }

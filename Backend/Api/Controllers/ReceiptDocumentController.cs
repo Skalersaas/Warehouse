@@ -5,6 +5,6 @@ using Domain.Models.Entities;
 
 namespace Api.Controllers;
 
-public class ReceiptDocumentController(ReceiptDocumentService service) : CrudController<ReceiptDocument, ReceiptDocumentCreateDto, ReceiptDocumentUpdateDto, ReceiptDocumentResponseDto>(service)
+public class ReceiptDocumentController(ReceiptDocumentService service) : CrudController<ReceiptDocument, CreateReceiptDocumentDto, UpdateReceiptDocumentDto, ReceiptDocumentResponseDto>(service)
 {
 }

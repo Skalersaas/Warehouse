@@ -6,6 +6,6 @@ using Persistence.Data.Interfaces;
 namespace Application.Services;
 
 public class ResourceService(IRepository<Resource> repo) 
-    : ArchiveService<Resource, ResourceCreateDto, ResourceUpdateDto, ResourceResponseDto>(repo)
+    : ArchiveService<Resource, CreateResourceDto, UpdateResourceDto>(repo)
 {
 }

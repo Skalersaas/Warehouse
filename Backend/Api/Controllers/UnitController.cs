@@ -5,6 +5,6 @@ using Domain.Models.Entities;
 
 namespace Api.Controllers;
 
-public class UnitController(UnitService service) : ArchiveController<Unit, UnitCreateDto, UnitUpdateDto, UnitResponseDto>(service)
+public class UnitController(UnitService service) : ArchiveController<Unit, CreateUnitDto, UpdateUnitDto, UnitResponseDto>(service)
 {
 }

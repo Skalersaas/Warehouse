@@ -1,11 +1,11 @@
-﻿namespace Application.Models.Client;
+namespace Application.Models.Client;
 
 public class ClientResponseDto
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
-    public bool IsArchive { get; set; } = false;
+    public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

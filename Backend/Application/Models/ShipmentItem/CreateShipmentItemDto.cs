@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Application.Models.ReceiptItem;
+namespace Application.Models.ShipmentItem;
 
-public class CreateReceiptItemDto
+public class CreateShipmentItemDto
 {
     [Required]
     [Range(1, int.MaxValue)]
