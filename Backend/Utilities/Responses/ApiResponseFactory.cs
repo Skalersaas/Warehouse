@@ -17,7 +17,7 @@ public class ApiResponseFactory
     /// <returns>An ObjectResult with 200 OK status code.</returns>
     public static ObjectResult Success<T>(T? data = default, int? fullCount = null)
     {
-        var response = ApiResponse<T?>.SuccessResponse(data, fullCount);
+        var response = Result<T?>.SuccessResult(data, message: null, fullCount);
         return new(response) { StatusCode = StatusCodes.Status200OK };
     }
 
@@ -30,7 +30,7 @@ public class ApiResponseFactory
     /// <returns>An ObjectResult with the specified status code.</returns>
     public static ObjectResult Error(string message, int statusCode, object? errors = null)
     {
-        var response = ApiResponse<object>.ErrorResponse(message, errors);
+        var response = Result<object>.ErrorResult(message, errors);
         return new(response) { StatusCode = statusCode };
     }
 

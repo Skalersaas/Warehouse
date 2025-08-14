@@ -4,5 +4,4 @@ public enum ShipmentStatus
 {
     Draft,
     Signed,
-    Revoked
 }

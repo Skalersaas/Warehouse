@@ -1,4 +1,4 @@
-﻿using Api.Attributes;
+using Api.Attributes;
 using Application.Interfaces;
 using Domain.Models.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -18,64 +18,127 @@ namespace Api.Controllers.Base
         where TResponse : class, new()
     {
         protected IModelService<TModel, TCreate, TUpdate> _service = service;
+
+        /// <summary>
+        /// Creates a new entity.
+        /// </summary>
+        /// <param name="entity">The entity data to create.</param>
+        /// <returns>The created entity or error response.</returns>
         [HttpPost]
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status409Conflict)]
-        public virtual async Task<ObjectResult> Create([FromBody] TCreate entity)
+        [ProducesResponseType<Result<object>>(StatusCodes.Status400BadRequest)]
+        public virtual async Task<IActionResult> Create([FromBody] TCreate entity)
         {
-            var (suceed, result) = await _service.CreateAsync(entity);
+            var result = await _service.CreateAsync(entity);
 
-            return suceed
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
-                : ApiResponseFactory.BadRequest("Entity with such Number exists");
+            if (!result.Success)
+            {
+                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
+            }
+
+            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
+            return ApiResponseFactory.Ok(responseData);
         }
+
+        /// <summary>
+        /// Gets an entity by its ID.
+        /// </summary>
+        /// <param name="id">The entity ID.</param>
+        /// <returns>The entity or error response.</returns>
         [HttpGet("{id}")]
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
-        public virtual async Task<ObjectResult> GetById(int id)
+        [ProducesResponseType<Result<object>>(StatusCodes.Status404NotFound)]
+        public virtual async Task<IActionResult> GetById(int id)
         {
-            var (succeed, result) = await _service.GetByIdAsync(id);
+            var result = await _service.GetByIdAsync(id);
 
-            return succeed
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
-                : ApiResponseFactory.NotFound("Entity with such Id was not found");
+            if (!result.Success)
+            {
+                return ApiResponseFactory.NotFound(result.Message);
+            }
+
+            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
+            return ApiResponseFactory.Ok(responseData);
         }
+
+        /// <summary>
+        /// Gets all entities with optional filtering.
+        /// </summary>
+        /// <param name="model">Optional search parameters.</param>
+        /// <returns>List of entities or error response.</returns>
         [HttpGet]
-
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
-        public virtual async Task<ObjectResult> GetAll([FromBody] SearchModel model)
+        [ProducesResponseType<Result<object>>(StatusCodes.Status400BadRequest)]
+        public virtual async Task<IActionResult> GetAll([FromQuery] SearchModel? model = null)
         {
-            var (data, fullCount) = await _service.QueryBy(model);
+            model ??= new SearchModel();
+            var result = await _service.QueryBy(model);
 
-            var responseData = data.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
-            return ApiResponseFactory.Ok(responseData, fullCount);
+            if (!result.Success)
+            {
+                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
+            }
+
+            var responseData = result.Data.list.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
+            return ApiResponseFactory.Ok(responseData, result.Data.count);
         }
+
+        /// <summary>
+        /// Queries entities with advanced filtering.
+        /// </summary>
+        /// <param name="model">The search filter parameters.</param>
+        /// <returns>Filtered list of entities or error response.</returns>
         [HttpPost("query")]
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status400BadRequest)]
-        public virtual async Task<ObjectResult> Query([FromBody] SearchFilterModel model)
+        [ProducesResponseType<Result<object>>(StatusCodes.Status400BadRequest)]
+        public virtual async Task<IActionResult> Query([FromBody] SearchFilterModel model)
         {
-            var (data, fullCount) = await _service.QueryBy(model);
+            var result = await _service.QueryBy(model);
 
-            var responseData = data.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
-            return ApiResponseFactory.Ok(responseData, fullCount);
+            if (!result.Success)
+            {
+                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
+            }
+
+            var responseData = result.Data.list.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
+            return ApiResponseFactory.Ok(responseData, result.Data.count);
         }
+
+        /// <summary>
+        /// Updates an existing entity.
+        /// </summary>
+        /// <param name="entity">The entity data to update.</param>
+        /// <returns>The updated entity or error response.</returns>
         [HttpPut]
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
-        public virtual async Task<ObjectResult> Update([FromBody] TUpdate entity)
+        [ProducesResponseType<Result<object>>(StatusCodes.Status404NotFound)]
+        [ProducesResponseType<Result<object>>(StatusCodes.Status400BadRequest)]
+        public virtual async Task<IActionResult> Update([FromBody] TUpdate entity)
         {
-            var (succeed, result) = await _service.UpdateAsync(entity);
+            var result = await _service.UpdateAsync(entity);
 
-            return succeed
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result))
-                : ApiResponseFactory.BadRequest("Entity with such GUID exists");
+            if (!result.Success)
+            {
+                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
+            }
+
+            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
+            return ApiResponseFactory.Ok(responseData);
         }
-        [HttpDelete("{id}")]
-        [ProducesResponseType<ApiResponse<object>>(StatusCodes.Status404NotFound)]
-        public virtual async Task<ObjectResult> Delete(int id)
-        {
-            var suceed = await _service.DeleteAsync(id);
 
-            return suceed
-                ? ApiResponseFactory.NotFound("Entity with such GUID was not found")
-                : ApiResponseFactory.Ok("No data");
+        /// <summary>
+        /// Deletes an entity by its ID.
+        /// </summary>
+        /// <param name="id">The entity ID to delete.</param>
+        /// <returns>Success confirmation or error response.</returns>
+        [HttpDelete("{id}")]
+        [ProducesResponseType<Result<object>>(StatusCodes.Status200OK)]
+        [ProducesResponseType<Result<object>>(StatusCodes.Status404NotFound)]
+        public virtual async Task<IActionResult> Delete(int id)
+        {
+            var result = await _service.DeleteAsync(id);
+
+            if (!result.Success)
+            {
+                return ApiResponseFactory.NotFound(result.Message);
+            }
+
+            return ApiResponseFactory.Ok(result.Success);
         }
     }
 }
