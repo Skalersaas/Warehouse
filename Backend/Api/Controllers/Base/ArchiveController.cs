@@ -27,7 +27,7 @@ public class ArchiveController<TModel, TCreate, TUpdate, TResponse>(IArchiveServ
         var result = await _service.ArchiveAsync(id);
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Success)
+            ? ApiResponseFactory.Ok(result.Message)
             : ApiResponseFactory.NotFound(result.Message);
     }
 

@@ -21,13 +21,6 @@ public class Result
     public string? Message { get; init; }
 
     /// <summary>
-    /// Optional count of items (useful for pagination or batch operations).
-    /// Ignored in JSON serialization when null.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Count { get; init; }
-
-    /// <summary>
     /// Optional error details or validation errors.
     /// Ignored in JSON serialization when null.
     /// </summary>
@@ -41,11 +34,10 @@ public class Result
     /// <param name="message">Optional message describing the result.</param>
     /// <param name="count">Optional count of items.</param>
     /// <param name="errors">Optional error details.</param>
-    protected Result(bool success, string? message = null, int? count = null, object? errors = null)
+    protected Result(bool success, string? message = null, object? errors = null)
     {
         Success = success;
         Message = message;
-        Count = count;
         Errors = errors;
     }
 
@@ -65,7 +57,7 @@ public class Result
     /// <param name="errors">Optional detailed error information.</param>
     /// <returns>A new Result instance indicating failure.</returns>
     public static Result ErrorResult(string message, object? errors = null) =>
-        new(false, message, null, errors);
+        new(false, message, errors);
 }
 
 /// <summary>
@@ -79,9 +71,15 @@ public class Result<T> : Result
     /// The data returned by the operation.
     /// Ignored in JSON serialization when null.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Data { get; init; }
 
+    /// <summary>
+    /// Optional count of items (useful for pagination or batch operations).
+    /// Ignored in JSON serialization when null.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int? Count { get; init; }
     /// <summary>
     /// Initializes a new instance of the Result{T} class.
     /// </summary>
@@ -91,9 +89,10 @@ public class Result<T> : Result
     /// <param name="count">Optional count of items.</param>
     /// <param name="errors">Optional error details.</param>
     private Result(bool success, T? data, string? message = null, int? count = null, object? errors = null)
-        : base(success, message, count, errors)
+        : base(success, message, errors)
     {
         Data = data;
+        Count = count;
     }
 
     /// <summary>
@@ -114,24 +113,4 @@ public class Result<T> : Result
     /// <returns>A new Result{T} instance indicating failure.</returns>
     public static Result<T> ErrorResult(string message, object? errors = null) =>
         new(false, default, message, null, errors);
-
-    /// <summary>
-    /// Creates a successful result with data and count (useful for paginated results).
-    /// </summary>
-    /// <param name="data">The data to include in the response.</param>
-    /// <param name="totalCount">The total count of items.</param>
-    /// <param name="message">Optional success message.</param>
-    /// <returns>A new Result{T} instance indicating success with count.</returns>
-    public static Result<T> SuccessWithCount(T data, int totalCount, string? message = null) =>
-        new(true, data, message, totalCount);
-
-    /// <summary>
-    /// Converts a non-generic Result to a generic Result{T} with default data.
-    /// </summary>
-    /// <param name="result">The base result to convert.</param>
-    /// <returns>A new Result{T} instance with the same success status and properties.</returns>
-    public static Result<T> FromResult(Result result) =>
-        result.Success 
-            ? new(true, default, result.Message, result.Count, result.Errors)
-            : new(false, default, result.Message, result.Count, result.Errors);
 }

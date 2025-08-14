@@ -1,10 +1,12 @@
 using Application.Interfaces;
 using Domain.Models.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 using Persistence.Data.Interfaces;
 using System.Linq.Expressions;
 using Utilities.DataManipulation;
 using Utilities.Responses;
-using Microsoft.Extensions.Logging;
 
 namespace Application.Services.Base
 {
@@ -57,6 +59,10 @@ namespace Application.Services.Base
                 }
 
                 return Result.SuccessResult("Entity deleted successfully");
+            }
+            catch (DbUpdateException)
+            {
+                return Result.ErrorResult("Cannot delete this entity because it is referenced by other records.");
             }
             catch (Exception ex)
             {

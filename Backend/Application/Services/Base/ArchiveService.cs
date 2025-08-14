@@ -36,8 +36,13 @@ public class ArchiveService<TModel, TCreate, TUpdate>(IRepository<TModel> _conte
             {
                 return Result.ErrorResult($"Entity with ID {id} not found");
             }
+            
+            var foundArchivable = (found as IArchivable);
+            if (foundArchivable.IsArchived == isArchived)
+                return Result.ErrorResult($"Entity with ID {id} is already {(isArchived ? "archived" : "unarchived")}");
 
-            (found as IArchivable)!.IsArchived = isArchived;
+
+            foundArchivable!.IsArchived = isArchived;
 
             var updated = await _context.UpdateAsync(found);
             if (updated?.IsArchived != isArchived)
