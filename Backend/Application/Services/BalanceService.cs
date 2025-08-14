@@ -12,7 +12,6 @@ public class BalanceService(IRepository<Balance> repository, ILogger<BalanceServ
     : ModelService<Balance, BalanceCreateDto, BalanceUpdateDto>(repository, logger)
 {
     private readonly IRepository<Balance> _repository = repository;
-
     /// <summary>
     /// Gets balance for a specific resource and unit combination.
     /// </summary>

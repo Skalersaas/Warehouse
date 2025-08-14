@@ -121,7 +121,7 @@ namespace Application.Services.Base
             }
         }
 
-        public virtual async Task<Result<(IEnumerable<TModel>, int)>> QueryBy(SearchModel model)
+        public virtual async Task<Result<(IEnumerable<TModel> list, int count)>> QueryBy(SearchModel model)
         {
             try
             {
@@ -134,6 +134,11 @@ namespace Application.Services.Base
 
                 return Result<(IEnumerable<TModel>, int)>.SuccessResult((data, fullCount),
                     count: fullCount);
+            }
+            catch (ArgumentException arg)
+            {
+                _logger.LogError(arg, message: arg.Message);
+                return Result<(IEnumerable<TModel>, int)>.ErrorResult(arg.Message);
             }
             catch (Exception ex)
             {
