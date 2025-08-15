@@ -1,0 +1,33 @@
+#input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  label {
+    font-size: 14px;
+    color: $first_sub_text_gray;
+    margin-left: 2px;
+  }
+  input {
+    color: $first_sub_text_gray;
+    border-radius: 6px;
+    background: $main_white;
+    padding: 12px;
+    outline: 1px solid transparent;
+    border: 1px solid $second_blue;
+    font-size: 13px;
+    transition: 0.3s ease;
+
+    &::placeholder {
+      color: $first_sub_text_gray;
+    }
+
+    &:focus {
+      outline: 1px solid $main_blue;
+      border: 1px solid $main_blue;
+
+      &::placeholder {
+        color: $main_blue;
+      }
+    }
+  }
+}

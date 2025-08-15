@@ -1,15 +1,30 @@
 import styles from "./style.module.scss";
 import type { ICommonType } from "../../../types/common.type";
-import { Archive, ArchiveX, Info, Trash } from "lucide-react";
+import { Archive, ArchiveX, FilePenLineIcon, Info, Trash, Undo2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { Dispatch, SetStateAction } from "react";
 
 interface IProps {
   data: ICommonType[];
   isClient?: boolean;
   page: string;
+  setAlertIsOpen: Dispatch<SetStateAction<boolean>>;
+  setSelectedId: Dispatch<SetStateAction<number | undefined>>;
+  setArchiveStatus?: Dispatch<SetStateAction<boolean | undefined>>;
+  setSignStatus?: Dispatch<SetStateAction<number | undefined>>;
+  setAlertAction?: Dispatch<SetStateAction<string>>;
 }
 
-const Table = ({ data, isClient, page }: IProps) => {
+const Table = ({
+  data,
+  isClient,
+  page,
+  setAlertIsOpen,
+  setSelectedId,
+  setArchiveStatus,
+  setSignStatus,
+  setAlertAction,
+}: IProps) => {
   return (
     <div className={styles["table__container"]}>
       {data.length ? (
@@ -30,14 +45,48 @@ const Table = ({ data, isClient, page }: IProps) => {
               >
                 <Info width={14} />
               </Link>
-              <div className={styles["table__container--row--action--archive"]}>
-                {dt.isArchived ? (
-                  <ArchiveX width={14} />
-                ) : (
-                  <Archive width={14} />
-                )}
-              </div>
-              <div className={styles["table__container--row--action--delete"]}>
+              {!["shipments", "receipts"].includes(page) && (
+                <div
+                  className={styles["table__container--row--action--archive"]}
+                  onClick={() => {
+                    setAlertIsOpen(true);
+                    setSelectedId(dt.id);
+                    setArchiveStatus?.(dt.isArchived);
+                    setAlertAction?.("archive");
+                  }}
+                >
+                  {dt.isArchived ? (
+                    <ArchiveX width={14} />
+                  ) : (
+                    <Archive width={14} />
+                  )}
+                </div>
+              )}
+              {["shipments"].includes(page) && (
+                <div
+                  className={styles["table__container--row--action--sign"]}
+                  onClick={() => {
+                    setAlertIsOpen(true);
+                    setSelectedId(dt.id);
+                    setSignStatus?.(dt?.status)
+                    setAlertAction?.("sign");
+                  }}
+                >
+                  {dt.status === 1 ? (
+                    <Undo2 width={14}/>
+                  ) : (
+                    <FilePenLineIcon width={14}/>
+                  )}
+                </div>
+              )}
+              <div
+                className={styles["table__container--row--action--delete"]}
+                onClick={() => {
+                  setAlertIsOpen(true);
+                  setSelectedId(dt.id);
+                  setAlertAction?.("delete");
+                }}
+              >
                 <Trash width={14} />
               </div>
             </div>

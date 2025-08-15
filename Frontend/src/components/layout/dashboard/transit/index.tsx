@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./style.module.scss";
 import type { IShipment } from "../../../../types/common.type";
-import formatDate from "../../../../utils/dateFormatter";
+import { formatDate } from "../../../../utils/dateFormatter";
 
 interface IProps {
   shipmentDocs: IShipment[];

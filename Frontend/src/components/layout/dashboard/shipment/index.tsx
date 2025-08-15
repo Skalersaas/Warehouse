@@ -3,7 +3,7 @@ import styles from "./style.module.scss";
 import type { IShipment } from "../../../../types/common.type";
 import { Calendar, Check, Package } from "lucide-react";
 import Loader from "../loader";
-import formatDate from "../../../../utils/dateFormatter";
+import { formatDate } from "../../../../utils/dateFormatter";
 
 const loadBtns = [
   {
@@ -21,7 +21,7 @@ interface IProps {
 }
 
 const ShipmentSection = ({ shipmentDocs }: IProps) => {
-  const [activeStatus, setActiveStatus] = useState(0);
+  const [activeStatus, setActiveStatus] = useState<number>(0);
   const handleClick = (id: number) => {
     setActiveStatus(id);
   };

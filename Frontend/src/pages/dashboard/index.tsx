@@ -8,7 +8,7 @@ import Loader from "../../components/layout/dashboard/loader";
 import { useDispatch } from "react-redux";
 import { setLoading } from "../../store/features/app/appSlice";
 import useApi from "../../hooks/useApi";
-import { getClient, getShipmentDocs } from "../../services";
+import { getClient, getShipment } from "../../services";
 import { useEffect, useState } from "react";
 import type { IClient, IShipment } from "../../types/common.type";
 
@@ -20,15 +20,15 @@ const Dashboard = () => {
 
   const fetchShipmentDocs = async () => {
     dispatch(setLoading(true));
-    const data = await api(getShipmentDocs, {});
-    setShipmentData(data ?? []);
+    const response = await api(getShipment, {});
+    setShipmentData(response.data ?? []);
     dispatch(setLoading(false));
   };
 
     const fetchClient = async () => {
     dispatch(setLoading(true));
-    const data = await api(getClient, {});
-    setClientData(data ?? []);
+    const response = await api(getClient, {});
+    setClientData(response.data ?? []);
     dispatch(setLoading(false));
   };
 

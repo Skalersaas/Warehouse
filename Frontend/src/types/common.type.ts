@@ -2,12 +2,14 @@ export interface IShipmentDocument {
   id: number;
   number: string;
   clientId: number;
-  clientName: string;
   date: string;
   status: number;
-  statusName: string;
-  createdAt: string;
-  updatedAt: string;
+  items: {
+    id?: number;
+    resourceId: number;
+    unitId: number;
+    quantity: number;
+  }[];
 }
 
 export interface IShipmentResource {
@@ -37,16 +39,44 @@ export interface IClient {
   name: string;
   address: string;
   isArchived: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface ICommonType {
   id: number;
   name: string;
   isArchived: boolean;
-  createdAt: string;
-  updatedAt: string;
 
   address?: string;
+  status?: number;
+}
+
+export interface IBalance {
+  id: number;
+  resourceId: number;
+  unitId: number;
+  quantity: number;
+}
+
+export interface IReceiptDocument {
+  id: number;
+  number: string;
+  date: string;
+  items: {
+    id?: number;
+    resourceId: number;
+    unitId: number;
+    quantity: number;
+  }[];
+}
+
+export interface IResource {
+  id: number;
+  name: string;
+  isArchived: boolean;
+}
+
+export interface IUnit {
+  id: number;
+  name: string;
+  isArchived: boolean;
 }

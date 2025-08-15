@@ -1,0 +1,32 @@
+.receipts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 40px;
+  padding-bottom: 20px;
+  @include lg_mobile {
+    padding-left: 40px;
+  }
+  transition: all 0.6s ease-in-out;
+  @include mobile {
+    padding: 0 20px;
+  }
+  .container-title{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    .create-button{
+      background-color: $main_blue;
+      color: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+        padding: 12px 0;
+
+      a {
+        padding: 12px 18px;
+        text-decoration: none;
+        color: #fff;
+      }
+    }
+  }
+}

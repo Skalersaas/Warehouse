@@ -23,6 +23,16 @@ export const put = async (url: string, data?: any) => {
     .catch(handleError);
 };
 
+export const patch = async (url: string, data?: any) => {
+  return fetch(`${API_URL}${url}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    headers: HEADERS,
+  })
+    .then(handleResponse)
+    .catch(handleError);
+};
+
 export const del = async (url: string, data?: any) => {
   return fetch(`${API_URL}${url}`, {
     method: "DELETE",
@@ -32,6 +42,7 @@ export const del = async (url: string, data?: any) => {
     .then(handleResponse)
     .catch(handleError);
 };
+
 export const get = async (url: string) => {
   return fetch(`${API_URL}${url}`, {
     method: "GET",
@@ -57,10 +68,10 @@ export const handleResponse = async (response: Response) => {
   }
   if (data?.errors?.length > 0) {
     data.errors.forEach((err: any) => {
-      errorAlert(`${err.property} ${err.message}`);
+      errorAlert(`${err.error}`);
     });
-  } else errorAlert(data.message);
-  return errorAlert(data?.message || "An error occurred.");
+  }
+   else errorAlert(data.message);
 };
 
 export const handleError = (err: Error) => {

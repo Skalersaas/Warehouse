@@ -1,0 +1,67 @@
+.balance__table__container {
+  background-image: linear-gradient(
+    to right bottom,
+    $section_bg_gradient_first,
+    $section_bg_gradient_second
+  );
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  &--row {
+    background-color: $main_white;
+    padding: 12px;
+    border-radius: 12px;
+    display: flex;
+    gap: 4px;
+    &--column {
+      width: 100%;
+      max-width: 200px;
+      border-right: 1px solid;
+    }
+    &--actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    &--action {
+      &--detail {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: $second_blue;
+        color: $main_blue;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      &--archive {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: $second_orange;
+        color: $main_orange;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      &--delete {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: $second_red;
+        color: $main_red;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+    }
+  }
+}
