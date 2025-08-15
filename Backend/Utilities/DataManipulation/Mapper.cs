@@ -27,6 +27,42 @@ public static class Mapper
         return (TDestination)MapObject(dto, typeof(TSource), typeof(TDestination));
     }
 
+    /// <summary>
+    /// Maps properties from a source object to an existing destination object.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <typeparam name="TDestination">The type of the destination object.</typeparam>
+    /// <param name="source">The source object to map from.</param>
+    /// <param name="destination">The existing destination object to map to.</param>
+    /// <param name="skipNullValues">If true, null values from source won't overwrite destination values.</param>
+    /// <exception cref="ArgumentNullException">Thrown when source or destination is null.</exception>
+    /// <remarks>
+    /// Updates the existing destination object with values from the source object.
+    /// Only maps properties that exist in both objects and are writable in the destination.
+    /// </remarks>
+    public static void MapToExisting<TSource, TDestination>(TSource source, TDestination destination, bool skipNullValues = false)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (destination == null) throw new ArgumentNullException(nameof(destination));
+
+        MapToExistingObject(source, destination, typeof(TSource), typeof(TDestination), skipNullValues);
+    }
+
+    /// <summary>
+    /// Maps properties from a source object to an existing destination object with type inference.
+    /// </summary>
+    /// <param name="source">The source object to map from.</param>
+    /// <param name="destination">The existing destination object to map to.</param>
+    /// <param name="skipNullValues">If true, null values from source won't overwrite destination values.</param>
+    /// <exception cref="ArgumentNullException">Thrown when source or destination is null.</exception>
+    public static void MapToExisting(object source, object destination, bool skipNullValues = false)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (destination == null) throw new ArgumentNullException(nameof(destination));
+
+        MapToExistingObject(source, destination, source.GetType(), destination.GetType(), skipNullValues);
+    }
+
     private static object MapObject(object source, Type sourceType, Type destinationType)
     {
         if (source == null) return null;
@@ -73,6 +109,64 @@ public static class Mapper
         }
 
         return destination;
+    }
+
+    private static void MapToExistingObject(object source, object destination, Type sourceType, Type destinationType, bool skipNullValues)
+    {
+        var sourceProps = sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var destPropsDict = destinationType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name);
+
+        foreach (var sourceProp in sourceProps)
+        {
+            if (!destPropsDict.TryGetValue(sourceProp.Name, out var destProp))
+                continue;
+
+            var sourceValue = sourceProp.GetValue(source);
+
+            // Skip null values if requested
+            if (skipNullValues && sourceValue == null)
+                continue;
+
+            if (sourceValue == null)
+            {
+                destProp.SetValue(destination, null);
+                continue;
+            }
+
+            var sourcePropertyType = sourceProp.PropertyType;
+            var destPropertyType = destProp.PropertyType;
+
+            // Direct assignment for compatible types
+            if (destPropertyType.IsAssignableFrom(sourcePropertyType))
+            {
+                destProp.SetValue(destination, sourceValue);
+            }
+            // Handle collections (IEnumerable<T>)
+            else if (IsEnumerableType(sourcePropertyType) && IsEnumerableType(destPropertyType))
+            {
+                var mappedCollection = MapCollection(sourceValue, sourcePropertyType, destPropertyType);
+                destProp.SetValue(destination, mappedCollection);
+            }
+            // Handle nested objects (DTOs) - map to existing nested object if it exists
+            else if (IsComplexType(sourcePropertyType) && IsComplexType(destPropertyType))
+            {
+                var existingNestedObject = destProp.GetValue(destination);
+                if (existingNestedObject != null)
+                {
+                    // Map to existing nested object
+                    MapToExistingObject(sourceValue, existingNestedObject, sourcePropertyType, destPropertyType, skipNullValues);
+                }
+                else
+                {
+                    // Create new nested object
+                    var mappedObject = MapObject(sourceValue, sourcePropertyType, destPropertyType);
+                    destProp.SetValue(destination, mappedObject);
+                }
+            }
+        }
     }
 
     private static object MapCollection(object sourceCollection, Type sourceType, Type destType)

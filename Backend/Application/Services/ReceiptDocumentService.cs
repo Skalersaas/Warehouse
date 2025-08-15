@@ -1,14 +1,16 @@
 using Application.Models.ReceiptDocument;
+using Application.Models.ReceiptItem;
 using Application.Services.Base;
 using Domain.Models.Entities;
-using Persistence.Data.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Persistence.Data;
 using Utilities.DataManipulation;
 using Utilities.Responses;
-using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
-public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceService balance, ILogger<ReceiptDocumentService> logger) 
+public class ReceiptDocumentService(ApplicationContext docs, BalanceService balance, ILogger<ReceiptDocumentService> logger)
     : ModelService<ReceiptDocument, CreateReceiptDocumentDto, UpdateReceiptDocumentDto>(docs, logger)
 {
     private readonly BalanceService _balance = balance;
@@ -17,20 +19,27 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
     {
         try
         {
-            if (entity == null)
-            {
-                return Result<ReceiptDocument>.ErrorResult("Receipt document data cannot be null");
-            }
+            // Consolidated validation
+            var validationResult = ValidateCreateRequest(entity);
+            if (!validationResult.Success)
+                return Result<ReceiptDocument>.ErrorResult(validationResult.Message);
 
-            if (entity.Items == null || !entity.Items.Any())
-            {
-                return Result<ReceiptDocument>.ErrorResult("Receipt document must contain at least one item");
-            }
+            // Validate items using helper (no client validation for receipts)
+            var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
+                _context,
+                entity.Items,
+                item => item.ResourceId,
+                item => item.UnitId,
+                item => item.Quantity
+            );
+            if (!itemsValidation.Success)
+                return Result<ReceiptDocument>.ErrorResult(itemsValidation.Message);
 
             var model = Mapper.FromDTO<ReceiptDocument, CreateReceiptDocumentDto>(entity);
-            var created = await repo.CreateAsync(model);
+            var created = _context.ReceiptDocuments.Add(model);
+            await _context.SaveChangesAsync();
 
-            if (created == null)
+            if (created.Entity == null)
             {
                 return Result<ReceiptDocument>.ErrorResult("Failed to create receipt document");
             }
@@ -42,11 +51,11 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
             if (!balanceResult.Success)
             {
                 _logger.LogWarning("Receipt document created but balance update failed: {Error}", balanceResult.Message);
-                return Result<ReceiptDocument>.SuccessResult(created, 
+                return Result<ReceiptDocument>.SuccessResult(created.Entity,
                     "Receipt document created but balance update had issues: " + balanceResult.Message);
             }
 
-            return Result<ReceiptDocument>.SuccessResult(created, "Receipt document created and balances updated successfully");
+            return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created and balances updated successfully");
         }
         catch (Exception ex)
         {
@@ -59,46 +68,35 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
     {
         try
         {
-            if (entity == null)
-            {
-                return Result<ReceiptDocument>.ErrorResult("Receipt document data cannot be null");
-            }
+            // Consolidated validation
+            var validationResult = ValidateUpdateRequest(entity);
+            if (!validationResult.Success)
+                return Result<ReceiptDocument>.ErrorResult(validationResult.Message);
 
-            var existing = await repo.GetByIdAsync(entity.Id);
+            var existing = await _context.ReceiptDocuments
+                .Include(r => r.Items)
+                .FirstOrDefaultAsync(x => x.Id == entity.Id);
             if (existing == null)
             {
                 return Result<ReceiptDocument>.ErrorResult($"Receipt document with ID {entity.Id} not found");
             }
 
+            // Validate items using helper
+            var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
+                _context,
+                entity.Items,
+                item => item.ResourceId,
+                item => item.UnitId,
+                item => item.Quantity
+            );
+            if (!itemsValidation.Success)
+                return Result<ReceiptDocument>.ErrorResult(itemsValidation.Message);
+
             // Calculate balance changes
-            var existingBalances = existing.Items
-                .GroupBy(item => new { item.ResourceId, item.UnitId })
-                .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+            var netChanges = CalculateBalanceChanges(existing.Items, entity.Items);
 
-            var newBalances = entity.Items
-                .GroupBy(item => new { item.ResourceId, item.UnitId })
-                .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
-
-            var allKeys = existingBalances.Keys.Union(newBalances.Keys);
-            var netChanges = allKeys
-                .Select(key =>
-                {
-                    var existingQty = existingBalances.GetValueOrDefault(key, 0);
-                    var newQty = newBalances.GetValueOrDefault(key, 0);
-                    var netChange = newQty - existingQty;
-                    return (key.ResourceId, key.UnitId, netChange);
-                })
-                .Where(change => change.netChange != 0)
-                .ToList();
-
-            var model = Mapper.FromDTO<ReceiptDocument, UpdateReceiptDocumentDto>(entity);
-            repo.Detach(model);
-            var updated = await repo.UpdateAsync(model);
-
-            if (updated == null)
-            {
-                return Result<ReceiptDocument>.ErrorResult("Failed to update receipt document");
-            }
+            Mapper.MapToExisting(entity, existing);
+            await _context.SaveChangesAsync();
 
             // Apply balance changes if any
             if (netChanges.Count != 0)
@@ -107,12 +105,12 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
                 if (!balanceResult.Success)
                 {
                     _logger.LogWarning("Receipt document updated but balance update failed: {Error}", balanceResult.Message);
-                    return Result<ReceiptDocument>.SuccessResult(updated, 
+                    return Result<ReceiptDocument>.SuccessResult(existing,
                         "Receipt document updated but balance update had issues: " + balanceResult.Message);
                 }
             }
 
-            return Result<ReceiptDocument>.SuccessResult(updated, "Receipt document updated successfully");
+            return Result<ReceiptDocument>.SuccessResult(existing, "Receipt document updated successfully");
         }
         catch (Exception ex)
         {
@@ -120,26 +118,7 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
             return Result<ReceiptDocument>.ErrorResult("An error occurred while updating the receipt document");
         }
     }
-    public override async Task<Result<(IEnumerable<ReceiptDocument>, int)>> QueryBy(SearchModel model)
-    {
-        try
-        {
-            if (model == null)
-            {
-                return Result<(IEnumerable<ReceiptDocument>, int)>.ErrorResult("Search model cannot be null");
-            }
 
-            var (data, fullCount) = await repo.QueryBy(model, i => i.Items);
-
-            return Result<(IEnumerable<ReceiptDocument>, int)>.SuccessResult((data, fullCount),
-                count: fullCount);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error querying receiptDocuments");
-            return Result<(IEnumerable<ReceiptDocument>, int)>.ErrorResult("An error occurred while searching entities");
-        }
-    }
     public override async Task<Result> DeleteAsync(int id)
     {
         try
@@ -149,27 +128,21 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
                 return Result.ErrorResult("Invalid ID provided");
             }
 
-            var existing = await repo.GetByIdAsync(id);
+            var existing = await _context.ReceiptDocuments
+                .Include(r => r.Items)
+                .FirstOrDefaultAsync(x => x.Id == id);
             if (existing == null)
             {
                 return Result.ErrorResult($"Receipt document with ID {id} not found");
             }
 
             // Check if we have sufficient stock to reverse the operations
-            foreach (var item in existing.Items)
-            {
-                var stockResult = await _balance.HasSufficientStockAsync(item.ResourceId, item.UnitId, item.Quantity);
-                if (!stockResult.Success || !stockResult.Data)
-                {
-                    return Result.ErrorResult($"Insufficient stock to reverse item: ResourceId {item.ResourceId}, UnitId {item.UnitId}. Cannot delete receipt document.");
-                }
-            }
+            var stockValidation = await ValidateStockForDeletion(existing.Items);
+            if (!stockValidation.Success)
+                return stockValidation;
 
-            var deleted = await repo.DeleteAsync(id);
-            if (!deleted)
-            {
-                return Result.ErrorResult("Failed to delete receipt document");
-            }
+            _context.ReceiptDocuments.Remove(existing);
+            await _context.SaveChangesAsync();
 
             // Reverse the balance changes
             var balanceReversals = existing.Items.Select(item => (item.ResourceId, item.UnitId, -item.Quantity));
@@ -189,4 +162,66 @@ public class ReceiptDocumentService(IRepository<ReceiptDocument> docs, BalanceSe
             return Result.ErrorResult("An error occurred while deleting the receipt document");
         }
     }
+
+    #region Private Methods
+    private static Result ValidateCreateRequest(CreateReceiptDocumentDto entity)
+    {
+        return entity switch
+        {
+            null => Result.ErrorResult("Receipt document data cannot be null"),
+            { Items: null or { Count: 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
+            _ => Result.SuccessResult()
+        };
+    }
+
+    private static Result ValidateUpdateRequest(UpdateReceiptDocumentDto entity)
+    {
+        return entity switch
+        {
+            null => Result.ErrorResult("Receipt document data cannot be null"),
+            { Id: <= 0 } => Result.ErrorResult("Invalid receipt document ID"),
+            { Items: null or { Count : 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
+            _ => Result.SuccessResult()
+        };
+    }
+
+    private List<(int ResourceId, int UnitId, decimal Quantity)> CalculateBalanceChanges(
+        ICollection<ReceiptItem> existingItems,
+        IEnumerable<UpdateReceiptItemDto> newItems)
+    {
+        var existingBalances = existingItems
+            .GroupBy(item => new { item.ResourceId, item.UnitId })
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        var newBalances = newItems
+            .GroupBy(item => new { item.ResourceId, item.UnitId })
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        var allKeys = existingBalances.Keys.Union(newBalances.Keys);
+
+        return allKeys
+            .Select(key =>
+            {
+                var existingQty = existingBalances.GetValueOrDefault(key, 0);
+                var newQty = newBalances.GetValueOrDefault(key, 0);
+                var netChange = newQty - existingQty;
+                return (key.ResourceId, key.UnitId, netChange);
+            })
+            .Where(change => change.netChange != 0)
+            .ToList();
+    }
+
+    private async Task<Result> ValidateStockForDeletion(ICollection<ReceiptItem> items)
+    {
+        foreach (var item in items)
+        {
+            var stockResult = await _balance.HasSufficientStockAsync(item.ResourceId, item.UnitId, item.Quantity);
+            if (!stockResult.Success || !stockResult.Data)
+            {
+                return Result.ErrorResult($"Insufficient stock to reverse item: ResourceId {item.ResourceId}, UnitId {item.UnitId}. Cannot delete receipt document.");
+            }
+        }
+        return Result.SuccessResult();
+    }
+    #endregion
 }

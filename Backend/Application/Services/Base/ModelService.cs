@@ -3,18 +3,21 @@ using Domain.Models.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using Persistence.Data.Interfaces;
+using Persistence.Data;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Utilities.DataManipulation;
 using Utilities.Responses;
 
 namespace Application.Services.Base
 {
-    public class ModelService<TModel, TCreate, TUpdate>(IRepository<TModel> context, ILogger<ModelService<TModel, TCreate, TUpdate>> logger) : IModelService<TModel, TCreate, TUpdate>
+    public class ModelService<TModel, TCreate, TUpdate>(ApplicationContext context, ILogger<ModelService<TModel, TCreate, TUpdate>> logger) : IModelService<TModel, TCreate, TUpdate>
         where TModel : class, IModel, new()
+        where TUpdate : IModel
     {
-        protected readonly IRepository<TModel> repo = context;
+        protected readonly DbSet<TModel> repo = context.Set<TModel>();
         protected readonly ILogger<ModelService<TModel, TCreate, TUpdate>> _logger = logger;
+        protected readonly ApplicationContext _context = context;
 
         public virtual async Task<Result<TModel>> CreateAsync(TCreate entity)
         {
@@ -26,7 +29,8 @@ namespace Application.Services.Base
                 }
 
                 var model = Mapper.FromDTO<TModel, TCreate>(entity);
-                var created = await repo.CreateAsync(model);
+                var created = (await repo.AddAsync(model)).Entity;
+                await context.SaveChangesAsync();
 
                 if (created == null)
                 {
@@ -50,13 +54,13 @@ namespace Application.Services.Base
                 {
                     return Result.ErrorResult("Invalid ID provided");
                 }
+                var found = await repo.FirstOrDefaultAsync(x => x.Id == id);
 
-                var success = await repo.DeleteAsync(id);
-                
-                if (!success)
-                {
-                    return Result.ErrorResult("Entity not found or could not be deleted");
-                }
+                if (found == null)
+                    return Result.ErrorResult("Entity not found");
+
+                repo.Remove(found);
+                await context.SaveChangesAsync();
 
                 return Result.SuccessResult("Entity deleted successfully");
             }
@@ -80,14 +84,13 @@ namespace Application.Services.Base
                     return Result<TModel>.ErrorResult("Invalid ID provided");
                 }
 
-                var model = await repo.GetByIdAsync(id);
 
-                if (model == null)
-                {
-                    return Result<TModel>.ErrorResult($"Entity with ID {id} not found");
-                }
+                var found = await repo.FirstOrDefaultAsync(x => x.Id == id);
 
-                return Result<TModel>.SuccessResult(model);
+                if (found == null)
+                    return Result<TModel>.ErrorResult("Entity not found");
+
+                return Result<TModel>.SuccessResult(found);
             }
             catch (Exception ex)
             {
@@ -105,14 +108,13 @@ namespace Application.Services.Base
                     return Result<TModel>.ErrorResult("Invalid ID provided");
                 }
 
-                var model = await repo.GetByIdAsync(id, includes);
-                
-                if (model == null)
-                {
-                    return Result<TModel>.ErrorResult($"Entity with ID {id} not found");
-                }
+                var found = await repo.FirstOrDefaultAsync(x => x.Id == id);
 
-                return Result<TModel>.SuccessResult(model);
+                if (found == null)
+                    return Result<TModel>.ErrorResult("Entity not found");
+
+
+                return Result<TModel>.SuccessResult(found);
             }
             catch (Exception ex)
             {
@@ -121,7 +123,8 @@ namespace Application.Services.Base
             }
         }
 
-        public virtual async Task<Result<(IEnumerable<TModel> list, int count)>> QueryBy(SearchModel model)
+        public virtual async Task<Result<(IEnumerable<TModel> list, int count)>> QueryBy(SearchModel model, 
+            Func<IQueryable<TModel>, IQueryable<TModel>>? includeConfig = null)
         {
             try
             {
@@ -130,7 +133,7 @@ namespace Application.Services.Base
                     return Result<(IEnumerable<TModel>, int)>.ErrorResult("Search model cannot be null");
                 }
 
-                var (data, fullCount) = await repo.QueryBy(model);
+                var (data, fullCount) = await QueryHelper(model, includeConfig);
 
                 return Result<(IEnumerable<TModel>, int)>.SuccessResult((data, fullCount),
                     count: fullCount);
@@ -146,7 +149,37 @@ namespace Application.Services.Base
                 return Result<(IEnumerable<TModel>, int)>.ErrorResult("An error occurred while searching entities");
             }
         }
+        private async Task<(IEnumerable<TModel> Data, int TotalCount)> QueryHelper(
+            SearchModel? model = null,
+            Func<IQueryable<TModel>, IQueryable<TModel>>? includeConfig = null)
+        {
+            IQueryable<TModel> baseQuery = repo.AsNoTracking().AsQueryable();
+            int total = 0;
 
+            if (model is not null)
+            {
+                if (model is SearchFilterModel filterModel)
+                {
+                    baseQuery = QueryMaster<TModel>.FilterByFieldsAndDate(baseQuery, filterModel.Filters,
+                        "CreatedAt", filterModel.DateFrom, filterModel.DateTo);
+                }
+
+                total = await baseQuery.CountAsync();
+
+                var dataQuery = includeConfig?.Invoke(baseQuery) ?? baseQuery;
+
+                dataQuery = QueryMaster<TModel>.OrderByField(dataQuery, model.SortedField, model.IsAscending);
+
+                if (model.PaginationValid())
+                    dataQuery = dataQuery.Skip((model.Page - 1) * model.Size).Take(model.Size);
+
+                var data = await dataQuery.ToListAsync();
+                return (data, total);
+            }
+
+            var allData = await (includeConfig?.Invoke(baseQuery) ?? baseQuery).ToListAsync();
+            return (allData, allData.Count);
+        }
         public virtual async Task<Result<TModel>> UpdateAsync(TUpdate entity)
         {
             try
@@ -155,16 +188,16 @@ namespace Application.Services.Base
                 {
                     return Result<TModel>.ErrorResult("Entity cannot be null");
                 }
+                var found = await repo.FirstOrDefaultAsync(x => x.Id == entity.Id);
 
-                var model = Mapper.FromDTO<TModel, TUpdate>(entity);
-                var updated = await repo.UpdateAsync(model);
-
-                if (updated == null)
+                if (found == null)
                 {
-                    return Result<TModel>.ErrorResult("Entity not found or could not be updated");
+                    return Result<TModel>.ErrorResult("Entity not found");
                 }
+                Mapper.MapToExisting(entity, found);
+                await context.SaveChangesAsync();
 
-                return Result<TModel>.SuccessResult(updated, "Entity updated successfully");
+                return Result<TModel>.SuccessResult(found, "Entity updated successfully");
             }
             catch (Exception ex)
             {

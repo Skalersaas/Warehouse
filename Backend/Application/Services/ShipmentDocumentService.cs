@@ -1,19 +1,19 @@
 ﻿using Application.Models.ShipmentDocument;
 using Application.Services.Base;
 using Domain.Models.Entities;
-using Persistence.Data.Interfaces;
+using Domain.Models.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Persistence.Data;
 using Utilities.DataManipulation;
 using Utilities.Responses;
-using Microsoft.Extensions.Logging;
-using Domain.Models.Enums;
 
 namespace Application.Services;
 
-public class ShipmentDocumentService(IRepository<ShipmentDocument> repo, BalanceService balance, ClientService clients, ILogger<ShipmentDocumentService> logger)
+public class ShipmentDocumentService(ApplicationContext repo, BalanceService balance, ClientService clients, ILogger<ShipmentDocumentService> logger)
     : ModelService<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto>(repo, logger)
 {
     private readonly BalanceService _balance = balance;
-    private readonly ClientService _clients = clients;
 
     public override async Task<Result<ShipmentDocument>> CreateAsync(CreateShipmentDocumentDto entity)
     {
@@ -24,15 +24,26 @@ public class ShipmentDocumentService(IRepository<ShipmentDocument> repo, Balance
             if (!validationResult.Success)
                 return Result<ShipmentDocument>.ErrorResult(validationResult.Message);
 
-            var clientValidation = await ValidateClient(entity.ClientId);
+            // Validate client using helper
+            var clientValidation = await DocumentValidationHelper.ValidateClientAsync(_context, entity.ClientId);
             if (!clientValidation.Success)
                 return Result<ShipmentDocument>.ErrorResult(clientValidation.Message);
 
-            var model = Mapper.FromDTO<ShipmentDocument, CreateShipmentDocumentDto>(entity);
-            var created = await repo.CreateAsync(model);
+            // Validate items using helper
+            var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
+                _context,
+                entity.Items,
+                item => item.ResourceId,
+                item => item.UnitId,
+                item => item.Quantity
+            );
+            if (!itemsValidation.Success)
+                return Result<ShipmentDocument>.ErrorResult(itemsValidation.Message);
 
-            return created != null
-                ? Result<ShipmentDocument>.SuccessResult(created, "Shipment document created successfully")
+            var result = await base.CreateAsync(entity);
+
+            return result.Success
+                ? Result<ShipmentDocument>.SuccessResult(result.Data, "Shipment document created successfully")
                 : Result<ShipmentDocument>.ErrorResult("Failed to create shipment document");
         }
         catch (Exception ex)
@@ -89,47 +100,16 @@ public class ShipmentDocumentService(IRepository<ShipmentDocument> repo, Balance
             return Result<ShipmentDocument>.ErrorResult("An error occurred while revoking the document");
         }
     }
-    public override async Task<Result<(IEnumerable<ShipmentDocument>, int)>> QueryBy(SearchModel model)
-    {
-        try
-        {
-            if (model == null)
-            {
-                return Result<(IEnumerable<ShipmentDocument>, int)>.ErrorResult("Search model cannot be null");
-            }
 
-            var (data, fullCount) = await repo.QueryBy(model, i => i.Items);
-
-            return Result<(IEnumerable<ShipmentDocument>, int)>.SuccessResult((data, fullCount),
-                count: fullCount);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error querying Shipment documents");
-            return Result<(IEnumerable<ShipmentDocument>, int)>.ErrorResult("An error occurred while searching entities");
-        }
-    }
     #region Private Methods
-    private Task<Result> ValidateClient(int clientId)
-    {
-        return _clients.GetByIdAsync(clientId)
-            .ContinueWith(result =>
-            {
-                if (!result.Result.Success)
-                    return Result.ErrorResult($"Client with ID {clientId} not found");
-                else if (result.Result.Data.IsArchived)
-                    return Result.ErrorResult($"Client with ID {clientId} is archived");
-                return Result.SuccessResult();
-            });
-    }
     private static Result ValidateCreateRequest(CreateShipmentDocumentDto entity)
     {
         return entity switch
-            {
-                null => Result.ErrorResult("Shipment document data cannot be null"),
-                { Items: null or { Count: 0 } } => Result.ErrorResult("Shipment document must contain at least one item"),
-                _ => Result.SuccessResult()
-            };
+        {
+            null => Result.ErrorResult("Shipment document data cannot be null"),
+            { Items: null or { Count: 0 } } => Result.ErrorResult("Shipment document must contain at least one item"),
+            _ => Result.SuccessResult()
+        };
     }
 
     private async Task<Result<ShipmentDocument>> ValidateAndGetDocumentForSigning(int id)
@@ -227,13 +207,16 @@ public class ShipmentDocumentService(IRepository<ShipmentDocument> repo, Balance
     private async Task<Result<ShipmentDocument>> UpdateDocumentStatus(ShipmentDocument doc, ShipmentStatus status, string successMessage)
     {
         doc.Status = status;
-        repo.Detach(doc);
-        var updated = await repo.UpdateAsync(doc);
+        var found = await repo.FirstOrDefaultAsync(x => x.Id == doc.Id);
 
-        return updated != null
-            ? Result<ShipmentDocument>.SuccessResult(updated, successMessage)
-            : Result<ShipmentDocument>.ErrorResult("Failed to update document status");
+        if (found == null)
+        {
+            return Result<ShipmentDocument>.ErrorResult("Entity not found");
+        }
+        Mapper.MapToExisting(doc, found);
+        await _context.SaveChangesAsync();
+
+        return Result<ShipmentDocument>.SuccessResult(found, successMessage);
     }
-
     #endregion
 }

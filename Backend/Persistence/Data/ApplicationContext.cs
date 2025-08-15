@@ -36,91 +36,108 @@ public class ApplicationContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Resource>()
-            .HasIndex(r => r.Name)
-            .IsUnique();
-        modelBuilder.Entity<Resource>()
-            .Property(r => r.Name)
-            .IsRequired();
+        // Resource entity configuration
+        modelBuilder.Entity<Resource>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(r => r.Name).IsUnique();
+            entity.Property(r => r.Name).IsRequired();
+        });
 
-        modelBuilder.Entity<Unit>()
-            .HasIndex(u => u.Name)
-            .IsUnique();
-        modelBuilder.Entity<Unit>()
-            .Property(u => u.Name)
-            .IsRequired();
+        // Unit entity configuration
+        modelBuilder.Entity<Unit>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(u => u.Name).IsUnique();
+            entity.Property(u => u.Name).IsRequired();
+        });
 
-        modelBuilder.Entity<Client>()
-            .HasIndex(c => c.Name)
-            .IsUnique();
-        modelBuilder.Entity<Client>()
-            .Property(c => c.Name)
-            .IsRequired();
+        // Client entity configuration
+        modelBuilder.Entity<Client>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(c => c.Name).IsUnique();
+            entity.Property(c => c.Name).IsRequired();
+        });
 
-        modelBuilder.Entity<Balance>()
-            .HasIndex(b => new { b.ResourceId, b.UnitId })
-            .IsUnique();
+        // Balance entity configuration
+        modelBuilder.Entity<Balance>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(b => new { b.ResourceId, b.UnitId }).IsUnique();
 
-        modelBuilder.Entity<Balance>()
-            .HasOne(b => b.Resource)
-            .WithMany()
-            .HasForeignKey(b => b.ResourceId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(b => b.Resource)
+                .WithMany()
+                .HasForeignKey(b => b.ResourceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Balance>()
-            .HasOne(b => b.Unit)
-            .WithMany()
-            .HasForeignKey(b => b.UnitId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(b => b.Unit)
+                .WithMany()
+                .HasForeignKey(b => b.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-        modelBuilder.Entity<ReceiptDocument>()
-            .HasIndex(rd => rd.Number)
-            .IsUnique();
+        // ReceiptDocument entity configuration
+        modelBuilder.Entity<ReceiptDocument>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(rd => rd.Number).IsUnique();
+            entity.Property(rd => rd.Number).IsRequired();
+        });
 
-        modelBuilder.Entity<ReceiptItem>()
-            .HasOne(ri => ri.Document)
-            .WithMany(rd => rd.Items)
-            .HasForeignKey(ri => ri.DocumentId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // ReceiptItem entity configuration
+        modelBuilder.Entity<ReceiptItem>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
 
-        modelBuilder.Entity<ReceiptItem>()
-            .HasOne(ri => ri.Resource)
-            .WithMany()
-            .HasForeignKey(ri => ri.ResourceId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ri => ri.Document)
+                .WithMany(rd => rd.Items)
+                .HasForeignKey(ri => ri.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<ReceiptItem>()
-            .HasOne(ri => ri.Unit)
-            .WithMany()
-            .HasForeignKey(ri => ri.UnitId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ri => ri.Resource)
+                .WithMany()
+                .HasForeignKey(ri => ri.ResourceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<ShipmentDocument>()
-            .HasIndex(sd => sd.Number)
-            .IsUnique();
+            entity.HasOne(ri => ri.Unit)
+                .WithMany()
+                .HasForeignKey(ri => ri.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-        modelBuilder.Entity<ShipmentDocument>()
-            .HasOne(sd => sd.Client)
-            .WithMany()
-            .HasForeignKey(sd => sd.ClientId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // ShipmentDocument entity configuration
+        modelBuilder.Entity<ShipmentDocument>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.HasIndex(sd => sd.Number).IsUnique();
+            entity.Property(sd => sd.Number).IsRequired();
 
-        modelBuilder.Entity<ShipmentItem>()
-            .HasOne(si => si.Document)
-            .WithMany(sd => sd.Items)
-            .HasForeignKey(si => si.DocumentId)
-            .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(sd => sd.Client)
+                .WithMany()
+                .HasForeignKey(sd => sd.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-        modelBuilder.Entity<ShipmentItem>()
-            .HasOne(si => si.Resource)
-            .WithMany()
-            .HasForeignKey(si => si.ResourceId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // ShipmentItem entity configuration
+        modelBuilder.Entity<ShipmentItem>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
 
-        modelBuilder.Entity<ShipmentItem>()
-            .HasOne(si => si.Unit)
-            .WithMany()
-            .HasForeignKey(si => si.UnitId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(si => si.Document)
+                .WithMany(sd => sd.Items)
+                .HasForeignKey(si => si.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(si => si.Resource)
+                .WithMany()
+                .HasForeignKey(si => si.ResourceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(si => si.Unit)
+                .WithMany()
+                .HasForeignKey(si => si.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

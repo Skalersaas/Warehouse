@@ -1,17 +1,17 @@
 using Application.Interfaces;
 using Domain.Models.Interfaces;
-using Persistence.Data.Interfaces;
 using Utilities.Responses;
 using Microsoft.Extensions.Logging;
+using Persistence.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services.Base;
 
-public class ArchiveService<TModel, TCreate, TUpdate>(IRepository<TModel> _context, ILogger<ArchiveService<TModel, TCreate, TUpdate>> logger)
+public class ArchiveService<TModel, TCreate, TUpdate>(ApplicationContext _context, ILogger<ArchiveService<TModel, TCreate, TUpdate>> logger)
     : ModelService<TModel, TCreate, TUpdate>(_context, logger), IArchiveService<TModel, TCreate, TUpdate>
     where TModel : class, IArchivable, IModel, new()
+    where TUpdate : IModel
 {
-    protected readonly IRepository<TModel> _context = _context;
-
     public virtual async Task<Result> ArchiveAsync(int id)
     {
         return await SetArchiveStatusAsync(id, true, "Entity archived successfully");
@@ -31,30 +31,40 @@ public class ArchiveService<TModel, TCreate, TUpdate>(IRepository<TModel> _conte
                 return Result.ErrorResult("Invalid ID provided");
             }
 
-            var found = await _context.GetByIdAsync(id);
-            if (found == null)
+            var entity = await repo.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
             {
                 return Result.ErrorResult($"Entity with ID {id} not found");
             }
-            
-            var foundArchivable = (found as IArchivable);
-            if (foundArchivable.IsArchived == isArchived)
-                return Result.ErrorResult($"Entity with ID {id} is already {(isArchived ? "archived" : "unarchived")}");
 
-
-            foundArchivable!.IsArchived = isArchived;
-
-            var updated = await _context.UpdateAsync(found);
-            if (updated?.IsArchived != isArchived)
+            if (entity is not IArchivable archivableEntity)
             {
-                return Result.ErrorResult("Failed to update archive status");
+                return Result.ErrorResult("Entity does not support archiving");
             }
+
+            if (archivableEntity.IsArchived == isArchived)
+            {
+                var currentStatus = isArchived ? "archived" : "active";
+                return Result.ErrorResult($"Entity is already {currentStatus}");
+            }
+
+            archivableEntity.IsArchived = isArchived;
+
+            repo.Update(entity);
+            await _context.SaveChangesAsync();
 
             return Result.SuccessResult(successMessage);
         }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while updating archive status for entity {EntityType} with ID {Id}",
+                typeof(TModel).Name, id);
+            return Result.ErrorResult("Database error occurred while updating archive status");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error setting archive status for entity with ID {Id} of type {EntityType}", id, typeof(TModel).Name);
+            _logger.LogError(ex, "Error setting archive status for entity {EntityType} with ID {Id} to {IsArchived}",
+                typeof(TModel).Name, id, isArchived);
             return Result.ErrorResult("An error occurred while updating archive status");
         }
     }

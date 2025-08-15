@@ -1,17 +1,16 @@
 using Application.Models.Balance;
 using Application.Services.Base;
 using Domain.Models.Entities;
-using Persistence.Data.Interfaces;
 using Utilities.DataManipulation;
 using Utilities.Responses;
 using Microsoft.Extensions.Logging;
+using Persistence.Data;
 
 namespace Application.Services;
 
-public class BalanceService(IRepository<Balance> repository, ILogger<BalanceService> logger) 
+public class BalanceService(ApplicationContext repository, ILogger<BalanceService> logger) 
     : ModelService<Balance, BalanceCreateDto, BalanceUpdateDto>(repository, logger)
 {
-    private readonly IRepository<Balance> _repository = repository;
     /// <summary>
     /// Gets balance for a specific resource and unit combination.
     /// </summary>
@@ -36,7 +35,7 @@ public class BalanceService(IRepository<Balance> repository, ILogger<BalanceServ
                 return Result<Balance>.ErrorResult("Error querying balance", queryResult.Errors);
             }
 
-            var balance = queryResult.Data.Item1.FirstOrDefault();
+            var balance = queryResult.Data.list.FirstOrDefault();
             if (balance == null)
             {
                 return Result<Balance>.ErrorResult($"Balance not found for ResourceId {resourceId} and UnitId {unitId}");
@@ -108,7 +107,6 @@ public class BalanceService(IRepository<Balance> repository, ILogger<BalanceServ
                 }
                 else
                 {
-                    _repository.Detach(existingBalance);
                     var updateResult = await UpdateAsync(Mapper.FromDTO<BalanceUpdateDto, Balance>(existingBalance));
                     return updateResult.Success 
                         ? Result.SuccessResult("Balance updated successfully")
@@ -124,7 +122,7 @@ public class BalanceService(IRepository<Balance> repository, ILogger<BalanceServ
                     UnitId = unitId,
                     Quantity = quantityChange
                 };
-                var created = await _repository.CreateAsync(newBalance);
+                var created = _context.Balances.Add(newBalance);
                 return created != null 
                     ? Result.SuccessResult("New balance created successfully")
                     : Result.ErrorResult("Failed to create new balance");
@@ -167,7 +165,7 @@ public class BalanceService(IRepository<Balance> repository, ILogger<BalanceServ
                 }
             }
 
-            if (errors.Any())
+            if (errors.Count != 0)
             {
                 return Result.ErrorResult($"Bulk update completed with {errors.Count} errors", errors);
             }

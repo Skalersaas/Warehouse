@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
-using Persistence.Data.Interfaces;
-using Persistence.Data.Repositories;
 using Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,10 +75,6 @@ static void ConfigureDatabase(IServiceCollection services)
 }
 static void AddScoped(IServiceCollection services)
 {
-    // Repositories
-    services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-    services.AddScoped(typeof(IArchivableRepository<>), typeof(ArchivableRepository<>));
-    
     // Base Services
     services.AddScoped(typeof(IModelService<,,>), typeof(ModelService<,,>));
     services.AddScoped(typeof(IArchiveService<,,>), typeof(ArchiveService<,,>));

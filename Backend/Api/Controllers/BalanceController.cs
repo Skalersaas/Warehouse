@@ -23,7 +23,7 @@ namespace Api.Controllers
                 return ApiResponseFactory.BadRequest(result.Message, result.Errors);
             }
 
-            var responseData = result.Data.list.Select(Mapper.FromDTO<BalanceResponseDto, Balance>).ToList();
+            var responseData = result.Data.list.Select(item => Mapper.FromDTO<BalanceResponseDto, Balance>(item)).ToList();
             return ApiResponseFactory.Ok(responseData, result.Data.count);
         }
     }

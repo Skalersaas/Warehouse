@@ -16,5 +16,5 @@ public class UpdateReceiptDocumentDto : IModel
     [Required]
     public DateTime Date { get; set; }
     
-    public IEnumerable<UpdateReceiptItemDto>? Items { get; set; }
+    public ICollection<UpdateReceiptItemDto>? Items { get; set; }
 }

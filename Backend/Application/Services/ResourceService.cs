@@ -1,12 +1,12 @@
 using Application.Models.Resources;
 using Application.Services.Base;
 using Domain.Models.Entities;
-using Persistence.Data.Interfaces;
 using Microsoft.Extensions.Logging;
+using Persistence.Data;
 
 namespace Application.Services;
 
-public class ResourceService(IRepository<Resource> repo, ILogger<ResourceService> logger) 
+public class ResourceService(ApplicationContext repo, ILogger<ResourceService> logger) 
     : ArchiveService<Resource, CreateResourceDto, UpdateResourceDto>(repo, logger)
 {
 }

@@ -2,6 +2,7 @@ using Api.Attributes;
 using Application.Interfaces;
 using Domain.Models.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using Utilities.DataManipulation;
 using Utilities.Responses;
 
@@ -30,13 +31,9 @@ namespace Api.Controllers.Base
         {
             var result = await _service.CreateAsync(entity);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
-            }
-
-            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
-            return ApiResponseFactory.Ok(responseData);
+            return result.Success
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
         /// <summary>
@@ -50,13 +47,10 @@ namespace Api.Controllers.Base
         {
             var result = await _service.GetByIdAsync(id);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.NotFound(result.Message);
-            }
 
-            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
-            return ApiResponseFactory.Ok(responseData);
+            return result.Success
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                : ApiResponseFactory.NotFound(result.Message);
         }
 
         /// <summary>
@@ -71,13 +65,9 @@ namespace Api.Controllers.Base
             model ??= new SearchModel();
             var result = await _service.QueryBy(model);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
-            }
-
-            var responseData = result.Data.list.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
-            return ApiResponseFactory.Ok(responseData, result.Data.count);
+            return result.Success
+                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<TResponse, TModel>(item)).ToList(), result.Data.count)
+                : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
         /// <summary>
@@ -91,13 +81,9 @@ namespace Api.Controllers.Base
         {
             var result = await _service.QueryBy(model);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
-            }
-
-            var responseData = result.Data.list.Select(Mapper.FromDTO<TResponse, TModel>).ToList();
-            return ApiResponseFactory.Ok(responseData, result.Data.count);
+            return result.Success
+                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<TResponse, TModel>(item)).ToList(), result.Data.count)
+                : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
         /// <summary>
@@ -112,13 +98,10 @@ namespace Api.Controllers.Base
         {
             var result = await _service.UpdateAsync(entity);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.BadRequest(result.Message, result.Errors);
-            }
 
-            var responseData = Mapper.FromDTO<TResponse, TModel>(result.Data);
-            return ApiResponseFactory.Ok(responseData);
+            return result.Success
+                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
         /// <summary>
@@ -133,12 +116,9 @@ namespace Api.Controllers.Base
         {
             var result = await _service.DeleteAsync(id);
 
-            if (!result.Success)
-            {
-                return ApiResponseFactory.NotFound(result.Message);
-            }
-
-            return ApiResponseFactory.Ok(result.Success);
+            return result.Success
+                ? ApiResponseFactory.Ok(result.Success)
+                : ApiResponseFactory.NotFound(result.Message);
         }
     }
 }
