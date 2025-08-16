@@ -29,7 +29,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
     {
         var result = await service.QueryBy(model,
             query => query
-            .Include(s => s.Client.Name)
+            .Include(s => s.Client)
             .Include(s => s.Items)
             .ThenInclude(i => i.Resource)
             .Include(s => s.Items)
@@ -38,10 +38,6 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
         return result.Success
             ? ApiResponseFactory.Ok(result.Data.list.Select(model => model.ToResponseDto()), result.Count)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
-    }
-    public override async Task<IActionResult> Update([FromBody] UpdateShipmentDocumentDto entity)
-    {
-        return await base.Update(entity);
     }
 
     [HttpPatch("{id}/sign")]

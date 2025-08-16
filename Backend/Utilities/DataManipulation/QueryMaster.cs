@@ -33,8 +33,11 @@ public static class QueryMaster<T>
     /// </remarks>
     public static IQueryable<T> OrderByField(IQueryable<T> source, string fieldName, bool ascending)
     {
-        if (string.IsNullOrWhiteSpace(fieldName)) return source;
-
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            fieldName = "Id";
+            ascending = true;
+        }
         var parameter = Expression.Parameter(Type, "x");
         var property = Expression.Property(parameter, GetProperty(fieldName));
         var lambda = Expression.Lambda(property, parameter);
