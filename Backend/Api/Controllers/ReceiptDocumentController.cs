@@ -6,12 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Utilities.DataManipulation;
 using Utilities.Responses;
+using Application;
 
 namespace Api.Controllers;
 
-public class ReceiptDocumentController(ReceiptDocumentService service) : CrudController<ReceiptDocument, CreateReceiptDocumentDto, UpdateReceiptDocumentDto, ReceiptDocumentResponseDto>(service)
+public class ReceiptDocumentController(ReceiptDocumentService service) : CrudController<ReceiptDocument, CreateReceiptDocumentDto, UpdateReceiptDocumentDto, ReceiptDocumentResponseDto, SearchFilterModelDates>(service)
 {
-    public override async Task<IActionResult> Query([FromBody] SearchFilterModel model)
+    public override async Task<IActionResult> Query([FromBody] SearchFilterModelDates model)
     {
         var result = await service.QueryBy(model,
             query => query
@@ -21,7 +22,8 @@ public class ReceiptDocumentController(ReceiptDocumentService service) : CrudCon
             .ThenInclude(i => i.Unit));
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Data, result.Count)
-            : ApiResponseFactory.BadRequest(result.Message, result.Errors);
+? ApiResponseFactory.Ok(
+    result.Data.list.Select(doc => doc.ToResponseDto())
+)            : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
 }

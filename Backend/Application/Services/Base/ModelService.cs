@@ -74,55 +74,40 @@ namespace Application.Services.Base
                 return Result.ErrorResult("An error occurred while deleting the entity");
             }
         }
-
         public virtual async Task<Result<TModel>> GetByIdAsync(int id)
         {
-            try
-            {
-                if (id <= 0)
-                {
-                    return Result<TModel>.ErrorResult("Invalid ID provided");
-                }
-
-
-                var found = await repo.FirstOrDefaultAsync(x => x.Id == id);
-
-                if (found == null)
-                    return Result<TModel>.ErrorResult("Entity not found");
-
-                return Result<TModel>.SuccessResult(found);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting entity by ID {Id} of type {EntityType}", id, typeof(TModel).Name);
-                return Result<TModel>.ErrorResult("An error occurred while retrieving the entity");
-            }
+            return await GetByIdAsync(id, includeConfig: null);
         }
 
-        public async Task<Result<TModel>> GetByIdAsync(int id, params Expression<Func<TModel, object>>[] includes)
+        public virtual async Task<Result<TModel>> GetByIdAsync(int id, Func<IQueryable<TModel>, IQueryable<TModel>>? includeConfig = null)
         {
             try
             {
+                // Input validation
                 if (id <= 0)
                 {
                     return Result<TModel>.ErrorResult("Invalid ID provided");
                 }
 
-                var found = await repo.FirstOrDefaultAsync(x => x.Id == id);
+                // Build and execute query
+                var query = includeConfig?.Invoke(repo.AsNoTracking()) ?? repo.AsNoTracking();
+                var found = await query.FirstOrDefaultAsync(x => x.Id == id);
 
-                if (found == null)
-                    return Result<TModel>.ErrorResult("Entity not found");
-
-
-                return Result<TModel>.SuccessResult(found);
+                // Return result
+                return found == null
+                    ? Result<TModel>.ErrorResult("Entity not found")
+                    : Result<TModel>.SuccessResult(found);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting entity by ID {Id} with includes of type {EntityType}", id, typeof(TModel).Name);
+                var logMessage = includeConfig != null
+                    ? "Error getting entity by ID {Id} with includes of type {EntityType}"
+                    : "Error getting entity by ID {Id} of type {EntityType}";
+
+                _logger.LogError(ex, logMessage, id, typeof(TModel).Name);
                 return Result<TModel>.ErrorResult("An error occurred while retrieving the entity");
             }
         }
-
         public virtual async Task<Result<(IEnumerable<TModel> list, int count)>> QueryBy(SearchModel model, 
             Func<IQueryable<TModel>, IQueryable<TModel>>? includeConfig = null)
         {
@@ -158,11 +143,13 @@ namespace Application.Services.Base
 
             if (model is not null)
             {
-                if (model is SearchFilterModel filterModel)
+
+                baseQuery = model switch
                 {
-                    baseQuery = QueryMaster<TModel>.FilterByFieldsAndDate(baseQuery, filterModel.Filters,
-                        "CreatedAt", filterModel.DateFrom, filterModel.DateTo);
-                }
+                    SearchFilterModelDates dates => QueryMaster<TModel>.FilterByFieldsAndDate(baseQuery, dates.Filters, "CreatedAt", dates.DateFrom, dates.DateTo),
+                    SearchFilterModel filterModel => QueryMaster<TModel>.FilterByFields(baseQuery, filterModel.Filters),
+                    _ => baseQuery
+                };
 
                 total = await baseQuery.CountAsync();
 

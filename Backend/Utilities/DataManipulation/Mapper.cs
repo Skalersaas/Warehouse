@@ -1,124 +1,188 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Utilities.DataManipulation;
 
 /// <summary>
-/// Provides functionality for mapping between DTO (Data Transfer Object) and domain model objects.
-/// This class handles the automatic mapping of properties between objects of different types.
+/// Provides functionality for mapping between DTO and domain model objects using lambda expressions.
 /// </summary>
 public static class Mapper
 {
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertyCache = new();
+    private static readonly ConcurrentDictionary<string, Func<object, object>> CompiledAccessors = new();
+
     /// <summary>
-    /// Maps properties from a DTO object to a new instance of the destination type.
+    /// Maps properties from a DTO object to a new instance of the destination type using lambda expressions.
     /// </summary>
     /// <typeparam name="TDestination">The type of object to create and map to.</typeparam>
     /// <typeparam name="TSource">The type of the source DTO object.</typeparam>
     /// <param name="dto">The source DTO object to map from.</param>
+    /// <param name="propertyMappings">Optional lambda-based property mappings.</param>
     /// <returns>A new instance of TDestination with properties mapped from the source DTO.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the dto parameter is null.</exception>
-    /// <remarks>
-    /// Maps properties with matching names and compatible types, preserving original values and handling only writable properties.
-    /// </remarks>
-    public static TDestination FromDTO<TDestination, TSource>(TSource dto)
+    public static TDestination FromDTO<TDestination, TSource>(TSource dto,
+        Action<PropertyMappingBuilder<TSource, TDestination>>? propertyMappings = null)
         where TDestination : new()
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
-        return (TDestination)MapObject(dto, typeof(TSource), typeof(TDestination));
+
+        var builder = new PropertyMappingBuilder<TSource, TDestination>();
+        propertyMappings?.Invoke(builder);
+
+        return (TDestination)MapObject(dto, typeof(TSource), typeof(TDestination), builder.GetMappings());
     }
 
     /// <summary>
-    /// Maps properties from a source object to an existing destination object.
+    /// Maps properties from a source object to an existing destination object using lambda expressions.
     /// </summary>
     /// <typeparam name="TSource">The type of the source object.</typeparam>
     /// <typeparam name="TDestination">The type of the destination object.</typeparam>
     /// <param name="source">The source object to map from.</param>
     /// <param name="destination">The existing destination object to map to.</param>
     /// <param name="skipNullValues">If true, null values from source won't overwrite destination values.</param>
-    /// <exception cref="ArgumentNullException">Thrown when source or destination is null.</exception>
-    /// <remarks>
-    /// Updates the existing destination object with values from the source object.
-    /// Only maps properties that exist in both objects and are writable in the destination.
-    /// </remarks>
-    public static void MapToExisting<TSource, TDestination>(TSource source, TDestination destination, bool skipNullValues = false)
+    /// <param name="propertyMappings">Optional lambda-based property mappings.</param>
+    public static void MapToExisting<TSource, TDestination>(TSource source, TDestination destination,
+        bool skipNullValues = false,
+        Action<PropertyMappingBuilder<TSource, TDestination>>? propertyMappings = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (destination == null) throw new ArgumentNullException(nameof(destination));
 
-        MapToExistingObject(source, destination, typeof(TSource), typeof(TDestination), skipNullValues);
+        var builder = new PropertyMappingBuilder<TSource, TDestination>();
+        propertyMappings?.Invoke(builder);
+
+        MapToExistingObject(source, destination, typeof(TSource), typeof(TDestination),
+            skipNullValues, builder.GetMappings());
     }
 
     /// <summary>
-    /// Maps properties from a source object to an existing destination object with type inference.
+    /// Builder class for creating property mappings using lambda expressions.
     /// </summary>
-    /// <param name="source">The source object to map from.</param>
-    /// <param name="destination">The existing destination object to map to.</param>
-    /// <param name="skipNullValues">If true, null values from source won't overwrite destination values.</param>
-    /// <exception cref="ArgumentNullException">Thrown when source or destination is null.</exception>
-    public static void MapToExisting(object source, object destination, bool skipNullValues = false)
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    public class PropertyMappingBuilder<TSource, TDestination>
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
-        if (destination == null) throw new ArgumentNullException(nameof(destination));
+        private readonly Dictionary<string, Func<TSource, object>> _mappings = new();
 
-        MapToExistingObject(source, destination, source.GetType(), destination.GetType(), skipNullValues);
+        /// <summary>
+        /// Maps a destination property to a source expression with automatic type conversion.
+        /// </summary>
+        /// <typeparam name="TDestProperty">The type of the destination property</typeparam>
+        /// <param name="destinationProperty">Expression pointing to the destination property</param>
+        /// <param name="sourceExpression">Expression defining how to get the value from source</param>
+        /// <returns>The builder for chaining</returns>
+        public PropertyMappingBuilder<TSource, TDestination> Map<TDestProperty>(
+            Expression<Func<TDestination, TDestProperty>> destinationProperty,
+            Expression<Func<TSource, object>> sourceExpression)
+        {
+            var destPropertyName = GetPropertyName(destinationProperty);
+            var compiledExpression = sourceExpression.Compile();
+
+            _mappings[destPropertyName] = source =>
+            {
+                var value = compiledExpression((TSource)source);
+                return ConvertValue(value, typeof(TDestProperty));
+            };
+            return this;
+        }
+
+        /// <summary>
+        /// Maps a destination property using a custom function.
+        /// </summary>
+        /// <typeparam name="TProperty">The type of the destination property</typeparam>
+        /// <param name="destinationProperty">Expression pointing to the destination property</param>
+        /// <param name="valueSelector">Custom function to calculate the value</param>
+        /// <returns>The builder for chaining</returns>
+        public PropertyMappingBuilder<TSource, TDestination> MapWith<TProperty>(
+            Expression<Func<TDestination, TProperty>> destinationProperty,
+            Func<TSource, TProperty> valueSelector)
+        {
+            var destPropertyName = GetPropertyName(destinationProperty);
+            _mappings[destPropertyName] = source => valueSelector(source);
+            return this;
+        }
+
+        internal Dictionary<string, Func<object, object>> GetMappings()
+        {
+            return _mappings.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new Func<object, object>(source => kvp.Value((TSource)source))
+            );
+        }
+
+        private static string GetPropertyName<T>(Expression<Func<TDestination, T>> expression)
+        {
+            return expression.Body switch
+            {
+                MemberExpression member => member.Member.Name,
+                UnaryExpression unary when unary.Operand is MemberExpression memberExpr => memberExpr.Member.Name,
+                _ => throw new ArgumentException("Expression must be a property access", nameof(expression))
+            };
+        }
     }
 
-    private static object MapObject(object source, Type sourceType, Type destinationType)
+    #region Private Implementation
+
+    private static object MapObject(object source, Type sourceType, Type destinationType,
+        Dictionary<string, Func<object, object>>? customMappings = null)
     {
         if (source == null) return null;
 
         var destination = Activator.CreateInstance(destinationType);
-        var sourceProps = sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        var destPropsDict = destinationType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        var sourceProps = GetCachedProperties(sourceType);
+        var destPropsDict = GetCachedProperties(destinationType)
             .Where(p => p.CanWrite)
             .ToDictionary(p => p.Name);
 
+        // Handle standard property mappings
         foreach (var sourceProp in sourceProps)
         {
             if (!destPropsDict.TryGetValue(sourceProp.Name, out var destProp))
                 continue;
 
             var sourceValue = sourceProp.GetValue(source);
-            if (sourceValue == null)
-            {
-                destProp.SetValue(destination, null);
-                continue;
-            }
+            SetPropertyValue(destination, destProp, sourceValue, sourceProp.PropertyType, destProp.PropertyType);
+        }
 
-            var sourcePropertyType = sourceProp.PropertyType;
-            var destPropertyType = destProp.PropertyType;
+        // Handle custom mappings
+        if (customMappings != null)
+        {
+            foreach (var mapping in customMappings)
+            {
+                var destPropertyName = mapping.Key;
+                var valueSelector = mapping.Value;
 
-            // Direct assignment for compatible types
-            if (destPropertyType.IsAssignableFrom(sourcePropertyType))
-            {
-                destProp.SetValue(destination, sourceValue);
-            }
-            // Handle collections (IEnumerable<T>)
-            else if (IsEnumerableType(sourcePropertyType) && IsEnumerableType(destPropertyType))
-            {
-                var mappedCollection = MapCollection(sourceValue, sourcePropertyType, destPropertyType);
-                destProp.SetValue(destination, mappedCollection);
-            }
-            // Handle nested objects (DTOs)
-            else if (IsComplexType(sourcePropertyType) && IsComplexType(destPropertyType))
-            {
-                var mappedObject = MapObject(sourceValue, sourcePropertyType, destPropertyType);
-                destProp.SetValue(destination, mappedObject);
+                if (!destPropsDict.TryGetValue(destPropertyName, out var destProp))
+                    continue;
+
+                try
+                {
+                    var value = valueSelector(source);
+                    var convertedValue = ConvertValue(value, destProp.PropertyType);
+                    destProp.SetValue(destination, convertedValue);
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception or handle it as needed
+                    throw new InvalidOperationException(
+                        $"Failed to map property '{destPropertyName}': {ex.Message}", ex);
+                }
             }
         }
 
         return destination;
     }
 
-    private static void MapToExistingObject(object source, object destination, Type sourceType, Type destinationType, bool skipNullValues)
+    private static void MapToExistingObject(object source, object destination, Type sourceType, Type destinationType,
+        bool skipNullValues, Dictionary<string, Func<object, object>>? customMappings = null)
     {
-        var sourceProps = sourceType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        var destPropsDict = destinationType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        var sourceProps = GetCachedProperties(sourceType);
+        var destPropsDict = GetCachedProperties(destinationType)
             .Where(p => p.CanWrite)
             .ToDictionary(p => p.Name);
 
+        // Handle standard property mappings
         foreach (var sourceProp in sourceProps)
         {
             if (!destPropsDict.TryGetValue(sourceProp.Name, out var destProp))
@@ -126,47 +190,106 @@ public static class Mapper
 
             var sourceValue = sourceProp.GetValue(source);
 
-            // Skip null values if requested
             if (skipNullValues && sourceValue == null)
                 continue;
 
-            if (sourceValue == null)
-            {
-                destProp.SetValue(destination, null);
-                continue;
-            }
+            SetPropertyValue(destination, destProp, sourceValue, sourceProp.PropertyType, destProp.PropertyType);
+        }
 
-            var sourcePropertyType = sourceProp.PropertyType;
-            var destPropertyType = destProp.PropertyType;
+        // Handle custom mappings
+        if (customMappings != null)
+        {
+            foreach (var mapping in customMappings)
+            {
+                var destPropertyName = mapping.Key;
+                var valueSelector = mapping.Value;
 
-            // Direct assignment for compatible types
-            if (destPropertyType.IsAssignableFrom(sourcePropertyType))
-            {
-                destProp.SetValue(destination, sourceValue);
-            }
-            // Handle collections (IEnumerable<T>)
-            else if (IsEnumerableType(sourcePropertyType) && IsEnumerableType(destPropertyType))
-            {
-                var mappedCollection = MapCollection(sourceValue, sourcePropertyType, destPropertyType);
-                destProp.SetValue(destination, mappedCollection);
-            }
-            // Handle nested objects (DTOs) - map to existing nested object if it exists
-            else if (IsComplexType(sourcePropertyType) && IsComplexType(destPropertyType))
-            {
-                var existingNestedObject = destProp.GetValue(destination);
-                if (existingNestedObject != null)
+                if (!destPropsDict.TryGetValue(destPropertyName, out var destProp))
+                    continue;
+
+                try
                 {
-                    // Map to existing nested object
-                    MapToExistingObject(sourceValue, existingNestedObject, sourcePropertyType, destPropertyType, skipNullValues);
+                    var value = valueSelector(source);
+
+                    if (skipNullValues && value == null)
+                        continue;
+
+                    var convertedValue = ConvertValue(value, destProp.PropertyType);
+                    destProp.SetValue(destination, convertedValue);
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Create new nested object
-                    var mappedObject = MapObject(sourceValue, sourcePropertyType, destPropertyType);
-                    destProp.SetValue(destination, mappedObject);
+                    throw new InvalidOperationException(
+                        $"Failed to map property '{destPropertyName}': {ex.Message}", ex);
                 }
             }
         }
+    }
+
+    private static void SetPropertyValue(object destination, PropertyInfo destProp, object sourceValue,
+        Type sourcePropertyType, Type destPropertyType)
+    {
+        if (sourceValue == null)
+        {
+            destProp.SetValue(destination, null);
+            return;
+        }
+
+        // Direct assignment for compatible types
+        if (destPropertyType.IsAssignableFrom(sourcePropertyType))
+        {
+            destProp.SetValue(destination, sourceValue);
+        }
+        // Handle collections (IEnumerable<T>)
+        else if (IsEnumerableType(sourcePropertyType) && IsEnumerableType(destPropertyType))
+        {
+            var mappedCollection = MapCollection(sourceValue, sourcePropertyType, destPropertyType);
+            destProp.SetValue(destination, mappedCollection);
+        }
+        // Handle nested objects (DTOs)
+        else if (IsComplexType(sourcePropertyType) && IsComplexType(destPropertyType))
+        {
+            var mappedObject = MapObject(sourceValue, sourcePropertyType, destPropertyType);
+            destProp.SetValue(destination, mappedObject);
+        }
+        else
+        {
+            // Try to convert the value
+            var convertedValue = ConvertValue(sourceValue, destPropertyType);
+            destProp.SetValue(destination, convertedValue);
+        }
+    }
+
+    private static object ConvertValue(object value, Type targetType)
+    {
+        if (value == null)
+            return null;
+
+        var sourceType = value.GetType();
+
+        // If types are compatible, return as-is
+        if (targetType.IsAssignableFrom(sourceType))
+            return value;
+
+        // Handle nullable types
+        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        // Try to convert using Convert.ChangeType
+        try
+        {
+            return Convert.ChangeType(value, underlyingType);
+        }
+        catch
+        {
+            // If conversion fails, return the original value or default
+            return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
+        }
+    }
+
+    private static PropertyInfo[] GetCachedProperties(Type type)
+    {
+        return PropertyCache.GetOrAdd(type, t =>
+            t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
     }
 
     private static object MapCollection(object sourceCollection, Type sourceType, Type destType)
@@ -221,7 +344,7 @@ public static class Mapper
                typeof(IEnumerable).IsAssignableFrom(type);
     }
 
-    private static Type GetEnumerableElementType(Type type)
+    private static Type? GetEnumerableElementType(Type type)
     {
         if (type.IsArray)
             return type.GetElementType();
@@ -257,4 +380,6 @@ public static class Mapper
                type != typeof(decimal) &&
                !type.IsValueType;
     }
+
+    #endregion
 }

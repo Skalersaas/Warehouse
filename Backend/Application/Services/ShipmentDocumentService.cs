@@ -116,7 +116,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     {
         if (id <= 0) return Result<ShipmentDocument>.ErrorResult("Invalid document ID");
 
-        var docResult = await GetByIdAsync(id, s => s.Items);
+        var docResult = await GetByIdAsync(id, s => s.Include(d => d.Items));
         if (!docResult.Success) return Result<ShipmentDocument>.ErrorResult($"Document {id} not found");
 
         var doc = docResult.Data;
@@ -132,7 +132,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     {
         if (id <= 0) return Result<ShipmentDocument>.ErrorResult("Invalid document ID");
 
-        var docResult = await GetByIdAsync(id, s => s.Items);
+        var docResult = await GetByIdAsync(id, s => s.Include(d => d.Items));
         if (!docResult.Success) return Result<ShipmentDocument>.ErrorResult($"Document {id} not found");
 
         var doc = docResult.Data;

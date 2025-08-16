@@ -1,7 +1,3 @@
-using Application.Models.Resources;
-using Application.Models.Units;
-using Domain.Models.Entities;
-
 namespace Application.Models.ShipmentItem;
 
 public class ShipmentItemResponseDto
@@ -11,6 +7,6 @@ public class ShipmentItemResponseDto
     public int UnitId { get; set; }
     public decimal Quantity { get; set; }
 
-    public ResourceResponseDto Resource { get; set; }
-    public UnitResponseDto Unit { get; set; }
+    public string ResourceName { get; set; }
+    public string UnitName { get; set; }
 }

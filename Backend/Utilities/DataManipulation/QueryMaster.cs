@@ -70,14 +70,32 @@ public static class QueryMaster<T>
             if (property == null) continue;
 
             Expression propertyExpression = Expression.Property(parameter, property);
+            Expression condition;
 
-            if (property.PropertyType != StringType)
+            // Handle boolean types specifically
+            if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?))
             {
-                propertyExpression = Expression.Call(propertyExpression, ToStringMethod);
+                if (bool.TryParse(value, out var boolValue))
+                {
+                    var boolConstant = Expression.Constant(boolValue, property.PropertyType);
+                    condition = Expression.Equal(propertyExpression, boolConstant);
+                }
+                else
+                {
+                    continue; // Skip invalid boolean values
+                }
             }
+            else
+            {
+                // Original string contains logic for non-boolean types
+                if (property.PropertyType != StringType)
+                {
+                    propertyExpression = Expression.Call(propertyExpression, ToStringMethod);
+                }
 
-            var constant = Expression.Constant(value);
-            var condition = Expression.Call(propertyExpression, ContainsMethod, constant);
+                var constant = Expression.Constant(value);
+                condition = Expression.Call(propertyExpression, ContainsMethod, constant);
+            }
 
             combinedExpression = combinedExpression == null
                 ? condition
@@ -206,4 +224,5 @@ public static class QueryMaster<T>
 
         return source;
     }
+
 }

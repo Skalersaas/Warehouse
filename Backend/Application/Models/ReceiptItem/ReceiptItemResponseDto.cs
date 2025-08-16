@@ -1,4 +1,6 @@
-﻿using Domain.Models.Entities;
+﻿using Application.Models.Resources;
+using Application.Models.Units;
+using Domain.Models.Entities;
 
 namespace Application.Models.ReceiptItem;
 
@@ -9,6 +11,6 @@ public class ReceiptItemResponseDto
     public int UnitId { get; set; }
     public decimal Quantity { get; set; }
 
-    public Resource Resource { get; set; }
-    public Unit Unit { get; set; }
+    public string ResourceName { get; set; }
+    public string UnitName { get; set; }
 }

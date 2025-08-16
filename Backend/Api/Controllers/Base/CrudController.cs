@@ -11,12 +11,14 @@ namespace Api.Controllers.Base
     [ApiController]
     [ModelValidation]
     [Route("[controller]")]
-    public abstract class CrudController<TModel, TCreate, TUpdate, TResponse>(IModelService<TModel, TCreate, TUpdate> service)
+    public abstract class CrudController<TModel, TCreate, TUpdate, TResponse, TSearchFilter>(
+        IModelService<TModel, TCreate, TUpdate> service)
         : ControllerBase
         where TModel : class, IModel, new()
         where TCreate : class
         where TUpdate : class, IModel
         where TResponse : class, new()
+        where TSearchFilter : SearchFilterModel, new()
     {
         protected IModelService<TModel, TCreate, TUpdate> _service = service;
 
@@ -47,7 +49,6 @@ namespace Api.Controllers.Base
         {
             var result = await _service.GetByIdAsync(id);
 
-
             return result.Success
                 ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
                 : ApiResponseFactory.NotFound(result.Message);
@@ -77,7 +78,7 @@ namespace Api.Controllers.Base
         /// <returns>Filtered list of entities or error response.</returns>
         [HttpPost("query")]
         [ProducesResponseType<Result<object>>(StatusCodes.Status400BadRequest)]
-        public virtual async Task<IActionResult> Query([FromBody] SearchFilterModel model)
+        public virtual async Task<IActionResult> Query([FromBody] TSearchFilter model)
         {
             var result = await _service.QueryBy(model);
 
@@ -97,7 +98,6 @@ namespace Api.Controllers.Base
         public virtual async Task<IActionResult> Update([FromBody] TUpdate entity)
         {
             var result = await _service.UpdateAsync(entity);
-
 
             return result.Success
                 ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
@@ -120,5 +120,15 @@ namespace Api.Controllers.Base
                 ? ApiResponseFactory.Ok(result.Success)
                 : ApiResponseFactory.NotFound(result.Message);
         }
+    }
+
+    public abstract class CrudController<TModel, TCreate, TUpdate, TResponse>(
+        IModelService<TModel, TCreate, TUpdate> service)
+        : CrudController<TModel, TCreate, TUpdate, TResponse, SearchFilterModel>(service)
+        where TModel : class, IModel, new()
+        where TCreate : class
+        where TUpdate : class, IModel
+        where TResponse : class, new()
+    {
     }
 }

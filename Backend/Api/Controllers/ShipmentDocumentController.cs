@@ -1,4 +1,5 @@
 ﻿using Api.Controllers.Base;
+using Application;
 using Application.Models.ShipmentDocument;
 using Application.Models.ShipmentItem;
 using Application.Services;
@@ -9,7 +10,7 @@ using Utilities.DataManipulation;
 using Utilities.Responses;
 namespace Api.Controllers;
 
-public class ShipmentDocumentController(ShipmentDocumentService service) : CrudController<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto, ShipmentDocumentResponseDto>(service)
+public class ShipmentDocumentController(ShipmentDocumentService service) : CrudController<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto, ShipmentDocumentResponseDto, SearchFilterModelDates>(service)
 {
     public override async Task<IActionResult> GetAll([FromQuery] SearchModel? model = null)
     {
@@ -21,10 +22,10 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
             .ThenInclude(i => i.Unit));
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<ShipmentDocumentResponseDto, ShipmentDocument>(item)), result.Count)
+            ? ApiResponseFactory.Ok(result.Data.list.Select(model => model.ToResponseDto()), result.Count)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
-    public override async Task<IActionResult> Query([FromBody] SearchFilterModel model)
+    public override async Task<IActionResult> Query([FromBody] SearchFilterModelDates model)
     {
         var result = await service.QueryBy(model,
             query => query
@@ -34,7 +35,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
             .ThenInclude(i => i.Unit));
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<ShipmentDocumentResponseDto, ShipmentDocument>(item)), result.Count)
+            ? ApiResponseFactory.Ok(result.Data.list.Select(model => model.ToResponseDto()), result.Count)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
 
