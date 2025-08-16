@@ -2,6 +2,7 @@
 using Application.Services;
 using Domain.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Utilities.DataManipulation;
 using Utilities.Responses;
 
@@ -16,14 +17,16 @@ namespace Api.Controllers
         [ProducesResponseType<Result<IEnumerable<Balance>>>(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBalanceAsync([FromBody] SearchFilterModel query)
         {
-            var result = await balance.QueryBy(query);
+            var result = await balance.QueryBy(query, x => x
+            .Include(x => x.Unit)
+            .Include(x => x.Resource));
 
             if (!result.Success)
             {
                 return ApiResponseFactory.BadRequest(result.Message, result.Errors);
             }
 
-            var responseData = result.Data.list.Select(item => Mapper.FromDTO<BalanceResponseDto, Balance>(item)).ToList();
+            var responseData = result.Data.list.Select(item => Mapper.AutoMap<BalanceResponseDto, Balance>(item)).ToList();
             return ApiResponseFactory.Ok(responseData, result.Data.count);
         }
     }

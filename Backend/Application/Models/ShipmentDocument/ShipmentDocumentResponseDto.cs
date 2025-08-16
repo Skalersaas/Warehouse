@@ -8,6 +8,7 @@ public class ShipmentDocumentResponseDto
     public int Id { get; set; }
     public string Number { get; set; } = string.Empty;
     public int ClientId { get; set; }
+    public string ClientName { get; set; }
     public DateTime Date { get; set; }
     public ShipmentStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }

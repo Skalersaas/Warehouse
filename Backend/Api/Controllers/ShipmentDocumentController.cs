@@ -1,7 +1,6 @@
 ﻿using Api.Controllers.Base;
 using Application;
 using Application.Models.ShipmentDocument;
-using Application.Models.ShipmentItem;
 using Application.Services;
 using Domain.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +15,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
     {
         var result = await service.QueryBy(model,
             query => query
+            .Include(s => s.Client)
             .Include(s => s.Items)
             .ThenInclude(i => i.Resource)
             .Include(s => s.Items)
@@ -29,6 +29,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
     {
         var result = await service.QueryBy(model,
             query => query
+            .Include(s => s.Client.Name)
             .Include(s => s.Items)
             .ThenInclude(i => i.Resource)
             .Include(s => s.Items)
@@ -38,7 +39,10 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
             ? ApiResponseFactory.Ok(result.Data.list.Select(model => model.ToResponseDto()), result.Count)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
-
+    public override async Task<IActionResult> Update([FromBody] UpdateShipmentDocumentDto entity)
+    {
+        return await base.Update(entity);
+    }
 
     [HttpPatch("{id}/sign")]
     [ProducesResponseType<Result<object>>(StatusCodes.Status404NotFound)]

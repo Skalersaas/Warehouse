@@ -7,34 +7,25 @@ using Utilities.DataManipulation;
 
 namespace Application;
 
-public static class DocumentMappingHelpers
+public static class MappingHelpers
 {
     public static ReceiptDocumentResponseDto ToResponseDto(this ReceiptDocument document)
     {
-        return Mapper.FromDTO<ReceiptDocumentResponseDto, ReceiptDocument>(document, map => map
-            .Map(dest => dest.Items, src => src.Items.Select(item => item.ToResponseDto()))
-        );
+        return Mapper.AutoMap<ReceiptDocumentResponseDto, ReceiptDocument>(document);
     }
 
     public static ReceiptItemResponseDto ToResponseDto(this ReceiptItem item)
     {
-        return Mapper.FromDTO<ReceiptItemResponseDto, ReceiptItem>(item, map => map
-            .Map(dest => dest.ResourceName, src => src.Resource.Name)
-            .Map(dest => dest.UnitName, src => src.Unit.Name)
-        );
+        return Mapper.AutoMap<ReceiptItemResponseDto, ReceiptItem>(item);
     }
+
     public static ShipmentDocumentResponseDto ToResponseDto(this ShipmentDocument document)
     {
-        return Mapper.FromDTO<ShipmentDocumentResponseDto, ShipmentDocument>(document, map => map
-            .Map(dest => dest.Items, src => src.Items.Select(item => item.ToResponseDto()))
-        );
+        return Mapper.AutoMap<ShipmentDocumentResponseDto, ShipmentDocument>(document);
     }
 
     public static ShipmentItemResponseDto ToResponseDto(this ShipmentItem item)
     {
-        return Mapper.FromDTO<ShipmentItemResponseDto, ShipmentItem>(item, map => map
-            .Map(dest => dest.ResourceName, src => src.Resource.Name)
-            .Map(dest => dest.UnitName, src => src.Unit.Name)
-        );
+        return Mapper.AutoMap<ShipmentItemResponseDto, ShipmentItem>(item);
     }
 }

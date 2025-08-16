@@ -34,7 +34,7 @@ namespace Api.Controllers.Base
             var result = await _service.CreateAsync(entity);
 
             return result.Success
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                ? ApiResponseFactory.Ok(Mapper.AutoMap<TResponse, TModel>(result.Data))
                 : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
@@ -50,7 +50,7 @@ namespace Api.Controllers.Base
             var result = await _service.GetByIdAsync(id);
 
             return result.Success
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                ? ApiResponseFactory.Ok(Mapper.AutoMap<TResponse, TModel>(result.Data))
                 : ApiResponseFactory.NotFound(result.Message);
         }
 
@@ -67,7 +67,7 @@ namespace Api.Controllers.Base
             var result = await _service.QueryBy(model);
 
             return result.Success
-                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<TResponse, TModel>(item)).ToList(), result.Data.count)
+                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.AutoMap<TResponse, TModel>(item)).ToList(), result.Data.count)
                 : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
@@ -83,7 +83,7 @@ namespace Api.Controllers.Base
             var result = await _service.QueryBy(model);
 
             return result.Success
-                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.FromDTO<TResponse, TModel>(item)).ToList(), result.Data.count)
+                ? ApiResponseFactory.Ok(result.Data.list.Select(item => Mapper.AutoMap<TResponse, TModel>(item)).ToList(), result.Data.count)
                 : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 
@@ -100,7 +100,7 @@ namespace Api.Controllers.Base
             var result = await _service.UpdateAsync(entity);
 
             return result.Success
-                ? ApiResponseFactory.Ok(Mapper.FromDTO<TResponse, TModel>(result.Data))
+                ? ApiResponseFactory.Ok(Mapper.AutoMap<TResponse, TModel>(result.Data))
                 : ApiResponseFactory.BadRequest(result.Message, result.Errors);
         }
 

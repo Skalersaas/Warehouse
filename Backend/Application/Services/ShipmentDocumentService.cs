@@ -52,6 +52,49 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             return Result<ShipmentDocument>.ErrorResult("An error occurred while creating the shipment document");
         }
     }
+    public override async Task<Result<ShipmentDocument>> UpdateAsync(UpdateShipmentDocumentDto entity)
+    {
+        try
+        {
+            // Consolidated validation
+            var validationResult = ValidateUpdateRequest(entity);
+            if (!validationResult.Success)
+                return Result<ShipmentDocument>.ErrorResult(validationResult.Message);
+
+            var existing = await _context.ShipmentDocuments
+                .Include(r => r.Items)
+                .FirstOrDefaultAsync(x => x.Id == entity.Id);
+
+            if (existing == null)
+            {
+                return Result<ShipmentDocument>.ErrorResult($"Shipment document with ID {entity.Id} not found");
+            }
+            else if (existing.Status == ShipmentStatus.Signed)
+                return Result<ShipmentDocument>.ErrorResult($"Signed shipment document cannot be changed");
+
+                // Validate items using helper
+            var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
+                _context,
+                entity.Items,
+                item => item.ResourceId,
+                item => item.UnitId,
+                item => item.Quantity
+            );
+            if (!itemsValidation.Success)
+                return Result<ShipmentDocument>.ErrorResult(itemsValidation.Message);
+
+            Mapper.AutoMapToExisting(entity, existing);
+            await _context.SaveChangesAsync();
+
+            return Result<ShipmentDocument>.SuccessResult(existing, "Shipment document updated successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating Shipment document with ID {Id}", entity?.Id);
+            return Result<ShipmentDocument>.ErrorResult("An error occurred while updating the Shipment document");
+        }
+    }
+
 
     /// <summary>
     /// Signs a shipment document, checking stock availability and updating balances.
@@ -103,6 +146,15 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
 
     #region Private Methods
     private static Result ValidateCreateRequest(CreateShipmentDocumentDto entity)
+    {
+        return entity switch
+        {
+            null => Result.ErrorResult("Shipment document data cannot be null"),
+            { Items: null or { Count: 0 } } => Result.ErrorResult("Shipment document must contain at least one item"),
+            _ => Result.SuccessResult()
+        };
+    }
+    private static Result ValidateUpdateRequest(UpdateShipmentDocumentDto entity)
     {
         return entity switch
         {
@@ -213,7 +265,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
         {
             return Result<ShipmentDocument>.ErrorResult("Entity not found");
         }
-        Mapper.MapToExisting(doc, found);
+        Mapper.AutoMapToExisting(doc, found);
         await _context.SaveChangesAsync();
 
         return Result<ShipmentDocument>.SuccessResult(found, successMessage);

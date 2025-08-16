@@ -1,12 +1,20 @@
 using Api.Middleware;
 using Application.Interfaces;
+using Application.Models.ReceiptDocument;
+using Application.Models.ReceiptItem;
+using Application.Models.ShipmentDocument;
+using Application.Models.ShipmentItem;
 using Application.Services;
 using Application.Services.Base;
+using Application;
+using Domain.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
 using Utilities;
+using Utilities.DataManipulation;
+using Application.Models.Balance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +41,9 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
 
     // Repos
     AddScoped(builder.Services);
+
+    // Mapper
+    RegisterMappings();
     builder.Services.AddAuthorization();
 }
 static void ConfigureApp(WebApplication app)
@@ -108,4 +119,31 @@ static void ConfigureSwagger(IServiceCollection services)
         });
     });
 }
+static void RegisterMappings()
+{
+    Mapper.RegisterMapping<ReceiptDocument, ReceiptDocumentResponseDto>(map => map
+        .Map(dest => dest.Items, src => src.Items.Select(item => item.ToResponseDto()))
+    );
+
+    Mapper.RegisterMapping<ReceiptItem, ReceiptItemResponseDto>(map => map
+        .Map(dest => dest.ResourceName, src => src.Resource.Name)
+        .Map(dest => dest.UnitName, src => src.Unit.Name)
+    );
+
+    Mapper.RegisterMapping<ShipmentDocument, ShipmentDocumentResponseDto>(map => map
+        .Map(dest => dest.Items, src => src.Items.Select(item => item.ToResponseDto()))
+        .Map(dest => dest.ClientName, src => src.Client.Name)
+    );
+
+    Mapper.RegisterMapping<ShipmentItem, ShipmentItemResponseDto>(map => map
+        .Map(dest => dest.ResourceName, src => src.Resource.Name)
+        .Map(dest => dest.UnitName, src => src.Unit.Name)
+    );
+
+    Mapper.RegisterMapping<Balance, BalanceResponseDto>(map => map
+        .Map(dest => dest.ResourceName, src => src.Resource.Name)
+        .Map(dest => dest.UnitName, src => src.Unit.Name)
+    );
+}
+
 #endregion

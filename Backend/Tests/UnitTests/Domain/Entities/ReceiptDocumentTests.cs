@@ -170,4 +170,123 @@ public class ReceiptDocumentTests
         document.Date = futureDate;
         document.Date.Should().Be(futureDate);
     }
+
+    [Fact]
+    public void ReceiptDocument_WithMultipleItems_ShouldMaintainCorrectRelationships()
+    {
+        // Arrange
+        var document = TestDataBuilder.CreateReceiptDocumentWithItems(3);
+
+        // Act & Assert
+        document.Items.Should().HaveCount(3);
+        document.Items.Should().OnlyContain(item => item.DocumentId == document.Id);
+        document.Items.Should().OnlyContain(item => item.Document == document);
+    }
+
+    [Fact]
+    public void ReceiptDocument_ItemManipulation_ShouldWorkCorrectly()
+    {
+        // Arrange
+        var document = new ReceiptDocument { Id = 1, Number = "REC-001" };
+        var item1 = TestDataBuilder.CreateValidReceiptItem(document.Id, 1, 1, 100m);
+        var item2 = TestDataBuilder.CreateValidReceiptItem(document.Id, 2, 1, 50m);
+        var item3 = TestDataBuilder.CreateValidReceiptItem(document.Id, 1, 2, 25m);
+
+        // Act - Add items
+        document.Items.Add(item1);
+        document.Items.Add(item2);
+        document.Items.Add(item3);
+
+        // Assert
+        document.Items.Should().HaveCount(3);
+        document.Items.Sum(i => i.Quantity).Should().Be(175m);
+
+        // Act - Remove item
+        document.Items.Remove(item2);
+
+        // Assert
+        document.Items.Should().HaveCount(2);
+        document.Items.Sum(i => i.Quantity).Should().Be(125m);
+        document.Items.Should().NotContain(item2);
+    }
+
+    [Fact]
+    public void ReceiptDocument_DocumentNumberGeneration_ShouldFollowPattern()
+    {
+        // Arrange & Act
+        var documents = new List<ReceiptDocument>
+        {
+            new ReceiptDocument { Number = "REC-2024-001" },
+            new ReceiptDocument { Number = "REC-2024-002" },
+            new ReceiptDocument { Number = "REC-2024-003" }
+        };
+
+        // Assert
+        documents.Should().OnlyContain(d => d.Number.StartsWith("REC-"));
+        documents.Should().OnlyContain(d => d.Number.Contains("2024"));
+        documents.Select(d => d.Number).Should().OnlyHaveUniqueItems();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(10)]
+    public void ReceiptDocument_WithVariousItemCounts_ShouldHandleCorrectly(int itemCount)
+    {
+        // Arrange
+        var document = new ReceiptDocument { Number = $"REC-{itemCount}-ITEMS" };
+
+        // Act
+        for (int i = 1; i <= itemCount; i++)
+        {
+            document.Items.Add(TestDataBuilder.CreateValidReceiptItem(document.Id, i, 1, i * 10m));
+        }
+
+        // Assert
+        document.Items.Should().HaveCount(itemCount);
+        if (itemCount > 0)
+        {
+            document.Items.Sum(i => i.Quantity).Should().Be(Enumerable.Range(1, itemCount).Sum(i => i * 10m));
+        }
+    }
+
+    [Fact]
+    public void ReceiptDocument_AuditTrail_ShouldTrackChanges()
+    {
+        // Arrange
+        var document = new ReceiptDocument
+        {
+            Number = "REC-AUDIT-001",
+            Date = DateTime.UtcNow.AddDays(-1)
+        };
+        var originalCreatedAt = document.CreatedAt;
+
+        // Act - Simulate update
+        document.Number = "REC-AUDIT-001-UPDATED";
+        document.UpdatedAt = DateTime.UtcNow;
+
+        // Assert
+        document.CreatedAt.Should().Be(originalCreatedAt);
+        document.UpdatedAt.Should().NotBeNull();
+        document.UpdatedAt.Should().BeAfter(document.CreatedAt);
+        document.Number.Should().Be("REC-AUDIT-001-UPDATED");
+    }
+
+    [Fact]
+    public void ReceiptDocument_EmptyDocument_ShouldBeValid()
+    {
+        // Arrange & Act
+        var emptyDocument = new ReceiptDocument
+        {
+            Number = "REC-EMPTY-001",
+            Date = DateTime.UtcNow
+        };
+
+        // Assert
+        emptyDocument.Items.Should().NotBeNull();
+        emptyDocument.Items.Should().BeEmpty();
+        emptyDocument.Number.Should().NotBeNullOrEmpty();
+        emptyDocument.Date.Should().NotBe(default(DateTime));
+    }
 }

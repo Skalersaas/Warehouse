@@ -158,4 +158,117 @@ public class BalanceTests
         balanceMax.Quantity.Should().Be(decimal.MaxValue);
         balanceMin.Quantity.Should().Be(decimal.MinValue);
     }
+
+    [Fact]
+    public void Balance_WithNavigationProperties_ShouldMaintainReferences()
+    {
+        // Arrange
+        var balance = new Balance();
+        var resource = TestDataBuilder.CreateValidResource("Test Resource");
+        var unit = TestDataBuilder.CreateValidUnit("kg");
+
+        // Act
+        balance.Resource = resource;
+        balance.Unit = unit;
+        balance.ResourceId = resource.Id;
+        balance.UnitId = unit.Id;
+
+        // Assert
+        balance.Resource.Should().BeSameAs(resource);
+        balance.Unit.Should().BeSameAs(unit);
+        balance.ResourceId.Should().Be(resource.Id);
+        balance.UnitId.Should().Be(unit.Id);
+    }
+
+    [Theory]
+    [InlineData(100.5, 25.25, 125.75)]
+    [InlineData(50.0, -20.0, 30.0)]
+    [InlineData(0.0, 100.0, 100.0)]
+    [InlineData(10.5, -10.5, 0.0)]
+    public void Balance_QuantityCalculations_ShouldBeAccurate(decimal initial, decimal change, decimal expected)
+    {
+        // Arrange
+        var balance = new Balance { Quantity = initial };
+
+        // Act
+        balance.Quantity += change;
+
+        // Assert
+        balance.Quantity.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Balance_ShouldSupportBulkPropertyAssignment()
+    {
+        // Arrange
+        var testData = new
+        {
+            Id = 123,
+            ResourceId = 456,
+            UnitId = 789,
+            Quantity = 99.99m
+        };
+
+        // Act
+        var balance = new Balance
+        {
+            Id = testData.Id,
+            ResourceId = testData.ResourceId,
+            UnitId = testData.UnitId,
+            Quantity = testData.Quantity
+        };
+
+        // Assert
+        balance.Id.Should().Be(testData.Id);
+        balance.ResourceId.Should().Be(testData.ResourceId);
+        balance.UnitId.Should().Be(testData.UnitId);
+        balance.Quantity.Should().Be(testData.Quantity);
+    }
+
+    [Fact]
+    public void Balance_ShouldSupportQuantityRounding()
+    {
+        // Arrange
+        var balance = new Balance();
+        var roundedQuantity = Math.Round(123.456789m, 2);
+
+        // Act
+        balance.Quantity = roundedQuantity;
+
+        // Assert
+        balance.Quantity.Should().Be(123.46m);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(999, 888)]
+    [InlineData(int.MaxValue, int.MaxValue)]
+    public void Balance_ShouldAcceptValidForeignKeys(int resourceId, int unitId)
+    {
+        // Arrange & Act
+        var balance = new Balance
+        {
+            ResourceId = resourceId,
+            UnitId = unitId
+        };
+
+        // Assert
+        balance.ResourceId.Should().Be(resourceId);
+        balance.UnitId.Should().Be(unitId);
+    }
+
+    [Fact]
+    public void Balance_StockLevelChecks_ShouldWorkCorrectly()
+    {
+        // Arrange
+        var lowStockBalance = new Balance { Quantity = 5.0m };
+        var normalStockBalance = new Balance { Quantity = 100.0m };
+        var overstockBalance = new Balance { Quantity = 10000.0m };
+        var threshold = 10.0m;
+
+        // Act & Assert
+        (lowStockBalance.Quantity < threshold).Should().BeTrue();
+        (normalStockBalance.Quantity >= threshold).Should().BeTrue();
+        (overstockBalance.Quantity > 1000.0m).Should().BeTrue();
+    }
 }

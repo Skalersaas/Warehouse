@@ -35,7 +35,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             if (!itemsValidation.Success)
                 return Result<ReceiptDocument>.ErrorResult(itemsValidation.Message);
 
-            var model = Mapper.FromDTO<ReceiptDocument, CreateReceiptDocumentDto>(entity);
+            var model = Mapper.AutoMap<ReceiptDocument, CreateReceiptDocumentDto>(entity);
             var created = _context.ReceiptDocuments.Add(model);
             await _context.SaveChangesAsync();
 
@@ -95,7 +95,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             // Calculate balance changes
             var netChanges = CalculateBalanceChanges(existing.Items, entity.Items);
 
-            Mapper.MapToExisting(entity, existing);
+            Mapper.AutoMapToExisting(entity, existing);
             await _context.SaveChangesAsync();
 
             // Apply balance changes if any
@@ -118,7 +118,6 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             return Result<ReceiptDocument>.ErrorResult("An error occurred while updating the receipt document");
         }
     }
-
     public override async Task<Result> DeleteAsync(int id)
     {
         try

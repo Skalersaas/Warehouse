@@ -28,7 +28,7 @@ namespace Application.Services.Base
                     return Result<TModel>.ErrorResult("Entity cannot be null");
                 }
 
-                var model = Mapper.FromDTO<TModel, TCreate>(entity);
+                var model = Mapper.AutoMap<TModel, TCreate>(entity);
                 var created = (await repo.AddAsync(model)).Entity;
                 await context.SaveChangesAsync();
 
@@ -181,7 +181,7 @@ namespace Application.Services.Base
                 {
                     return Result<TModel>.ErrorResult("Entity not found");
                 }
-                Mapper.MapToExisting(entity, found);
+                Mapper.AutoMapToExisting(entity, found);
                 await context.SaveChangesAsync();
 
                 return Result<TModel>.SuccessResult(found, "Entity updated successfully");

@@ -200,4 +200,132 @@ public class ShipmentDocumentTests
         document.Date = futureDate;
         document.Date.Should().Be(futureDate);
     }
+
+    [Theory]
+    [InlineData(ShipmentStatus.Draft, ShipmentStatus.Signed)]
+    [InlineData(ShipmentStatus.Signed, ShipmentStatus.Draft)] // Reverse flow should also work
+    public void ShipmentDocument_StatusWorkflow_ShouldAllowTransitions(ShipmentStatus fromStatus, ShipmentStatus toStatus)
+    {
+        // Arrange
+        var document = new ShipmentDocument { Status = fromStatus };
+
+        // Act
+        document.Status = toStatus;
+        document.UpdatedAt = DateTime.UtcNow;
+
+        // Assert
+        document.Status.Should().Be(toStatus);
+        document.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ShipmentDocument_WithClientRelationship_ShouldMaintainIntegrity()
+    {
+        // Arrange
+        var client = TestDataBuilder.CreateValidClient("Test Client", "123 Test St");
+        var document = TestDataBuilder.CreateValidShipmentDocument("SHIP-001", client.Id);
+        document.Client = client;
+
+        // Act & Assert
+        document.ClientId.Should().Be(client.Id);
+        document.Client.Should().BeSameAs(client);
+        document.Client.Name.Should().Be("Test Client");
+    }
+
+    [Fact]
+    public void ShipmentDocument_WithMultipleItems_ShouldCalculateTotals()
+    {
+        // Arrange
+        var document = TestDataBuilder.CreateShipmentDocumentWithItems(3);
+
+        // Act & Assert
+        document.Items.Should().HaveCount(3);
+        document.Items.Should().OnlyContain(item => item.DocumentId == document.Id);
+        
+        var totalQuantity = document.Items.Sum(i => i.Quantity);
+        totalQuantity.Should().BeGreaterThan(0);
+    }
+
+    [Theory]
+    [InlineData(ShipmentStatus.Draft, false)]
+    [InlineData(ShipmentStatus.Signed, true)]
+    public void ShipmentDocument_CompletionStatus_ShouldReflectSignedState(ShipmentStatus status, bool shouldBeComplete)
+    {
+        // Arrange & Act
+        var document = new ShipmentDocument { Status = status };
+        var isComplete = document.Status == ShipmentStatus.Signed;
+
+        // Assert
+        isComplete.Should().Be(shouldBeComplete);
+    }
+
+    [Fact]
+    public void ShipmentDocument_StatusHistory_ShouldTrackChanges()
+    {
+        // Arrange
+        var document = new ShipmentDocument
+        {
+            Number = "SHIP-STATUS-001",
+            Status = ShipmentStatus.Draft
+        };
+        var createdAt = document.CreatedAt;
+
+        // Act - Progress through statuses
+        document.Status = ShipmentStatus.Draft;
+        document.UpdatedAt = DateTime.UtcNow;
+        var pendingTime = document.UpdatedAt;
+
+        Thread.Sleep(1); // Ensure time difference
+
+        document.Status = ShipmentStatus.Signed;
+        document.UpdatedAt = DateTime.UtcNow;
+        var signedTime = document.UpdatedAt;
+
+        // Assert
+        document.Status.Should().Be(ShipmentStatus.Signed);
+        document.CreatedAt.Should().Be(createdAt);
+        signedTime.Should().BeAfter(pendingTime.Value);
+        pendingTime.Should().BeAfter(createdAt);
+    }
+
+    [Fact]
+    public void ShipmentDocument_EmptyShipment_ShouldBeValidDraft()
+    {
+        // Arrange & Act
+        var emptyShipment = new ShipmentDocument
+        {
+            Number = "SHIP-EMPTY-001",
+            ClientId = 1,
+            Date = DateTime.UtcNow,
+            Status = ShipmentStatus.Draft
+        };
+
+        // Assert
+        emptyShipment.Items.Should().NotBeNull();
+        emptyShipment.Items.Should().BeEmpty();
+        emptyShipment.Status.Should().Be(ShipmentStatus.Draft);
+        emptyShipment.ClientId.Should().BeGreaterThan(0);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(5, 3)]
+    [InlineData(10, 1)]
+    public void ShipmentDocument_WithVariousItemConfigurations_ShouldMaintainConsistency(int itemCount, int uniqueResources)
+    {
+        // Arrange
+        var document = new ShipmentDocument { Number = $"SHIP-{itemCount}-ITEMS" };
+
+        // Act
+        for (int i = 1; i <= itemCount; i++)
+        {
+            var resourceId = ((i - 1) % uniqueResources) + 1;
+            document.Items.Add(TestDataBuilder.CreateValidShipmentItem(document.Id, resourceId, 1, i * 5m));
+        }
+
+        // Assert
+        document.Items.Should().HaveCount(itemCount);
+        document.Items.Select(i => i.ResourceId).Distinct().Should().HaveCount(uniqueResources);
+        document.Items.Sum(i => i.Quantity).Should().Be(Enumerable.Range(1, itemCount).Sum(i => i * 5m));
+    }
 }

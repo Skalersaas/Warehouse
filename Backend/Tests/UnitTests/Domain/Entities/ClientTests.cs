@@ -134,4 +134,121 @@ public class ClientTests
         client.UpdatedAt.Should().Be(newUpdatedAt);
         client.UpdatedAt.Should().NotBe(originalUpdatedAt);
     }
+
+    [Fact]
+    public void Client_ArchiveWorkflow_ShouldWorkCorrectly()
+    {
+        // Arrange
+        var client = TestDataBuilder.CreateValidClient("Active Client", "Active Address");
+        client.IsArchived.Should().BeFalse();
+
+        // Act - Archive
+        client.IsArchived = true;
+        client.UpdatedAt = DateTime.UtcNow;
+
+        // Assert
+        client.IsArchived.Should().BeTrue();
+        client.UpdatedAt.Should().NotBeNull();
+
+        // Act - Unarchive
+        client.IsArchived = false;
+        client.UpdatedAt = DateTime.UtcNow;
+
+        // Assert
+        client.IsArchived.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("Client A", "Address A")]
+    [InlineData("Client B", "Address B")]
+    [InlineData("Very Long Client Name That Exceeds Normal Length", "Very Long Address That Also Exceeds Normal Length For Testing")]
+    public void Client_WithVariousNameAndAddressCombinations_ShouldWork(string name, string address)
+    {
+        // Arrange & Act
+        var client = new Client
+        {
+            Name = name,
+            Address = address
+        };
+
+        // Assert
+        client.Name.Should().Be(name);
+        client.Address.Should().Be(address);
+    }
+
+    [Fact]
+    public void Client_ShouldSupportCompleteEntityLifecycle()
+    {
+        // Arrange - Creation
+        var client = new Client
+        {
+            Name = "Lifecycle Test Client",
+            Address = "Initial Address"
+        };
+        var creationTime = client.CreatedAt;
+
+        // Act - Update
+        client.Name = "Updated Client Name";
+        client.Address = "Updated Address";
+        client.UpdatedAt = DateTime.UtcNow;
+        var updateTime = client.UpdatedAt;
+
+        // Act - Archive
+        client.IsArchived = true;
+        client.UpdatedAt = DateTime.UtcNow;
+
+        // Assert
+        client.Name.Should().Be("Updated Client Name");
+        client.Address.Should().Be("Updated Address");
+        client.IsArchived.Should().BeTrue();
+        client.CreatedAt.Should().Be(creationTime);
+        client.UpdatedAt.Should().BeAfter(updateTime.Value);
+    }
+
+    [Theory]
+    [InlineData("Test Client", "123 Main St", false)]
+    [InlineData("Archived Client", "456 Old St", true)]
+    public void Client_ShouldSupportDifferentArchiveStates(string name, string address, bool isArchived)
+    {
+        // Arrange & Act
+        var client = new Client
+        {
+            Name = name,
+            Address = address,
+            IsArchived = isArchived
+        };
+
+        // Assert
+        client.Name.Should().Be(name);
+        client.Address.Should().Be(address);
+        client.IsArchived.Should().Be(isArchived);
+    }
+
+    [Fact]
+    public void Client_TimestampProperties_ShouldFollowExpectedPattern()
+    {
+        // Arrange
+        var beforeCreation = DateTime.UtcNow;
+        
+        // Act
+        var client = new Client
+        {
+            Name = "Timestamp Test Client",
+            Address = "Test Address"
+        };
+        var afterCreation = DateTime.UtcNow;
+
+        // Assert
+        client.CreatedAt.Should().BeOnOrAfter(beforeCreation);
+        client.CreatedAt.Should().BeOnOrBefore(afterCreation);
+        client.UpdatedAt.Should().BeNull(); // Should be null until explicitly set
+
+        // Act - Set UpdatedAt
+        var updateTime = DateTime.UtcNow;
+        client.UpdatedAt = updateTime;
+
+        // Assert
+        client.UpdatedAt.Should().Be(updateTime);
+        client.UpdatedAt.Should().BeOnOrAfter(client.CreatedAt);
+    }
 }

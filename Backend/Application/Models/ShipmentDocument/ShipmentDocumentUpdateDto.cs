@@ -25,5 +25,5 @@ public class UpdateShipmentDocumentDto : IModel
     
     [Required]
     [MinLength(1)]
-    public IEnumerable<UpdateShipmentItemDto> Items { get; set; } = [];
+    public ICollection<UpdateShipmentItemDto> Items { get; set; } = [];
 }

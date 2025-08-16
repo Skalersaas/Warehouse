@@ -107,7 +107,7 @@ public class BalanceService(ApplicationContext repository, ILogger<BalanceServic
                 }
                 else
                 {
-                    var updateResult = await UpdateAsync(Mapper.FromDTO<BalanceUpdateDto, Balance>(existingBalance));
+                    var updateResult = await UpdateAsync(Mapper.AutoMap<BalanceUpdateDto, Balance>(existingBalance));
                     return updateResult.Success 
                         ? Result.SuccessResult("Balance updated successfully")
                         : Result.ErrorResult("Failed to update balance");

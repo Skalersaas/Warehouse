@@ -6,12 +6,85 @@ using System.Reflection;
 namespace Utilities.DataManipulation;
 
 /// <summary>
-/// Provides functionality for mapping between DTO and domain model objects using lambda expressions.
+/// Provides functionality for mapping between DTO and domain model objects with registration support.
 /// </summary>
 public static class Mapper
 {
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertyCache = new();
     private static readonly ConcurrentDictionary<string, Func<object, object>> CompiledAccessors = new();
+
+    // Registration storage
+    private static readonly ConcurrentDictionary<string, object> RegisteredMappings = new();
+
+    #region Registration Methods
+
+    /// <summary>
+    /// Registers a mapping configuration between two types.
+    /// </summary>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    /// <param name="propertyMappings">Property mapping configuration</param>
+    public static void RegisterMapping<TSource, TDestination>(
+        Action<PropertyMappingBuilder<TSource, TDestination>> propertyMappings)
+        where TDestination : new()
+    {
+        var key = GetMappingKey<TSource, TDestination>();
+        var builder = new PropertyMappingBuilder<TSource, TDestination>();
+        propertyMappings(builder);
+        RegisteredMappings[key] = builder.GetMappings();
+    }
+
+    /// <summary>
+    /// Registers a simple mapping that just uses property name matching (no custom mappings).
+    /// </summary>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    public static void RegisterMapping<TSource, TDestination>()
+        where TDestination : new()
+    {
+        var key = GetMappingKey<TSource, TDestination>();
+        RegisteredMappings[key] = new Dictionary<string, Func<object, object>>();
+    }
+
+    /// <summary>
+    /// Checks if a mapping is registered for the given types.
+    /// </summary>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    /// <returns>True if mapping is registered</returns>
+    public static bool IsMappingRegistered<TSource, TDestination>()
+    {
+        var key = GetMappingKey<TSource, TDestination>();
+        return RegisteredMappings.ContainsKey(key);
+    }
+
+    /// <summary>
+    /// Removes a registered mapping.
+    /// </summary>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    public static void UnregisterMapping<TSource, TDestination>()
+    {
+        var key = GetMappingKey<TSource, TDestination>();
+        RegisteredMappings.TryRemove(key, out _);
+    }
+
+    /// <summary>
+    /// Clears all registered mappings.
+    /// </summary>
+    public static void ClearAllMappings()
+    {
+        RegisteredMappings.Clear();
+    }
+
+    private static string GetMappingKey<TSource, TDestination>()
+    {
+        return $"{typeof(TSource).FullName}->{typeof(TDestination).FullName}";
+    }
+
+    #endregion
+
+    #region Mapping Methods with Registration Support
 
     /// <summary>
     /// Maps properties from a DTO object to a new instance of the destination type using lambda expressions.
@@ -21,16 +94,14 @@ public static class Mapper
     /// <param name="dto">The source DTO object to map from.</param>
     /// <param name="propertyMappings">Optional lambda-based property mappings.</param>
     /// <returns>A new instance of TDestination with properties mapped from the source DTO.</returns>
-    public static TDestination FromDTO<TDestination, TSource>(TSource dto,
+    private static TDestination FromDTO<TDestination, TSource>(TSource dto,
         Action<PropertyMappingBuilder<TSource, TDestination>>? propertyMappings = null)
         where TDestination : new()
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var builder = new PropertyMappingBuilder<TSource, TDestination>();
-        propertyMappings?.Invoke(builder);
-
-        return (TDestination)MapObject(dto, typeof(TSource), typeof(TDestination), builder.GetMappings());
+        var mappings = GetMappingsFromBuilder<TSource, TDestination>(propertyMappings);
+        return (TDestination)MapObject(dto, typeof(TSource), typeof(TDestination), mappings);
     }
 
     /// <summary>
@@ -42,19 +113,92 @@ public static class Mapper
     /// <param name="destination">The existing destination object to map to.</param>
     /// <param name="skipNullValues">If true, null values from source won't overwrite destination values.</param>
     /// <param name="propertyMappings">Optional lambda-based property mappings.</param>
-    public static void MapToExisting<TSource, TDestination>(TSource source, TDestination destination,
+    private static void MapToExisting<TSource, TDestination>(TSource source, TDestination destination,
         bool skipNullValues = false,
         Action<PropertyMappingBuilder<TSource, TDestination>>? propertyMappings = null)
+        where TDestination : new()
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (destination == null) throw new ArgumentNullException(nameof(destination));
 
-        var builder = new PropertyMappingBuilder<TSource, TDestination>();
-        propertyMappings?.Invoke(builder);
-
+        var mappings = GetMappingsFromBuilder(propertyMappings);
         MapToExistingObject(source, destination, typeof(TSource), typeof(TDestination),
-            skipNullValues, builder.GetMappings());
+            skipNullValues, mappings);
     }
+
+    /// <summary>
+    /// Auto-maps using registered mappings if available, otherwise falls back to property name matching.
+    /// </summary>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <param name="source">Source object</param>
+    /// <returns>Mapped destination object</returns>
+    public static TDestination AutoMap<TDestination, TSource>(TSource source)
+        where TDestination : new()
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        var key = GetMappingKey<TSource, TDestination>();
+        if (RegisteredMappings.TryGetValue(key, out var mappingsObj))
+        {
+            // Use registered mapping
+            var mappings = (Dictionary<string, Func<object, object>>)mappingsObj;
+            return (TDestination)MapObject(source, typeof(TSource), typeof(TDestination), mappings);
+        }
+        else
+        {
+            // Fall back to automatic property name matching
+            return FromDTO<TDestination, TSource>(source, null);
+        }
+    }
+
+    /// <summary>
+    /// Auto-maps to existing object using registered mappings if available, otherwise falls back to property name matching.
+    /// </summary>
+    /// <typeparam name="TSource">Source type</typeparam>
+    /// <typeparam name="TDestination">Destination type</typeparam>
+    /// <param name="source">Source object</param>
+    /// <param name="destination">Destination object</param>
+    /// <param name="skipNullValues">Skip null values</param>
+    public static void AutoMapToExisting<TSource, TDestination>(TSource source, TDestination destination,
+        bool skipNullValues = false)
+        where TDestination : new()
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (destination == null) throw new ArgumentNullException(nameof(destination));
+
+        var key = GetMappingKey<TSource, TDestination>();
+        if (RegisteredMappings.TryGetValue(key, out var mappingsObj))
+        {
+            // Use registered mapping
+            var mappings = (Dictionary<string, Func<object, object>>)mappingsObj;
+            MapToExistingObject(source, destination, typeof(TSource), typeof(TDestination), skipNullValues, mappings);
+        }
+        else
+        {
+            // Fall back to automatic property name matching
+            MapToExisting(source, destination, skipNullValues, null);
+        }
+    }
+
+    private static Dictionary<string, Func<object, object>>? GetMappingsFromBuilder<TSource, TDestination>(
+        Action<PropertyMappingBuilder<TSource, TDestination>>? propertyMappings)
+        where TDestination : new()
+    {
+        if (propertyMappings != null)
+        {
+            var builder = new PropertyMappingBuilder<TSource, TDestination>();
+            propertyMappings(builder);
+            return builder.GetMappings();
+        }
+
+        return null;
+    }
+
+    #endregion
+
+    #region Original Mapping Implementation
+    // ... (keeping all your existing PropertyMappingBuilder and private methods unchanged)
 
     /// <summary>
     /// Builder class for creating property mappings using lambda expressions.
@@ -122,8 +266,7 @@ public static class Mapper
         }
     }
 
-    #region Private Implementation
-
+    // ... (all your existing private methods remain the same)
     private static object MapObject(object source, Type sourceType, Type destinationType,
         Dictionary<string, Func<object, object>>? customMappings = null)
     {
