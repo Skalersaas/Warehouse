@@ -14,7 +14,6 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     : ModelService<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto>(repo, logger)
 {
     private readonly BalanceService _balance = balance;
-
     public override async Task<Result<ShipmentDocument>> CreateAsync(CreateShipmentDocumentDto entity)
     {
         try
@@ -62,6 +61,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
                 return Result<ShipmentDocument>.ErrorResult(validationResult.Message);
 
             var existing = await _context.ShipmentDocuments
+                .Include(r => r.Client)
                 .Include(r => r.Items)
                 .FirstOrDefaultAsync(x => x.Id == entity.Id);
 

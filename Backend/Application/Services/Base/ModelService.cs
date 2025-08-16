@@ -155,7 +155,7 @@ namespace Application.Services.Base
 
                 var dataQuery = includeConfig?.Invoke(baseQuery) ?? baseQuery;
 
-                dataQuery = QueryMaster<TModel>.OrderByField(dataQuery, model.SortedField, model.IsAscending);
+                dataQuery = QueryMaster<TModel>.OrderByField(dataQuery, model.SortedField, model.IsDescending);
 
                 if (model.PaginationValid())
                     dataQuery = dataQuery.Skip((model.Page - 1) * model.Size).Take(model.Size);

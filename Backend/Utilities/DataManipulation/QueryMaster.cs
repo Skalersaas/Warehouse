@@ -1,231 +1,248 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Utilities.DataManipulation;
+
 public static class QueryMaster<T>
 {
     private static readonly Type Type = typeof(T);
-    private static readonly Type StringType = typeof(string);
-    private static readonly Type DateTimeType = typeof(DateTime);
-    private static readonly Type NullableDateTimeType = typeof(DateTime?);
     private static readonly MethodInfo ToStringMethod = typeof(object).GetMethod(nameof(ToString))!;
-    private static readonly MethodInfo ContainsMethod = StringType.GetMethod(nameof(string.Contains), [StringType])!;
+    private static readonly MethodInfo ContainsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
+
+    // Cache for properties and compiled expressions
+    private static readonly ConcurrentDictionary<string, PropertyInfo> PropertyCache = new();
+    private static readonly ConcurrentDictionary<string, Func<IQueryable<T>, IQueryable<T>>> OrderExpressionCache = new();
 
     /// <summary>
-    /// Gets a property info for a given field name, ignoring case.
+    /// Gets a cached property info for a given field name, ignoring case.
     /// </summary>
-    /// <param name="fieldName">The name of the property to find.</param>
-    /// <returns>The PropertyInfo for the specified field.</returns>
-    /// <exception cref="ArgumentException">Thrown when the property is not found on the type.</exception>
     public static PropertyInfo GetProperty(string fieldName) =>
-        Type.GetProperty(fieldName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance)
-        ?? throw new ArgumentException($"Property '{fieldName}' not found on type '{Type.Name}'.");
+        PropertyCache.GetOrAdd(fieldName.ToLowerInvariant(),
+            _ => Type.GetProperty(fieldName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance)
+                ?? throw new ArgumentException($"Property '{fieldName}' not found on type '{Type.Name}'."));
 
     /// <summary>
-    /// Orders an IQueryable collection by a specified field.
+    /// Orders an IQueryable collection by a specified field with caching.
     /// </summary>
-    /// <param name="source">The source IQueryable collection.</param>
-    /// <param name="fieldName">The name of the field to order by.</param>
-    /// <param name="ascending">Whether to sort in ascending order (true) or descending order (false).</param>
-    /// <returns>An ordered IQueryable collection.</returns>
-    /// <remarks>
-    /// Returns the source collection unchanged if fieldName is null or empty.
-    /// </remarks>
-    public static IQueryable<T> OrderByField(IQueryable<T> source, string fieldName, bool ascending)
+    public static IQueryable<T> OrderByField(IQueryable<T> source, string? fieldName, bool descending = true)
     {
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            fieldName = "Id";
-            ascending = true;
-        }
-        var parameter = Expression.Parameter(Type, "x");
-        var property = Expression.Property(parameter, GetProperty(fieldName));
-        var lambda = Expression.Lambda(property, parameter);
+        fieldName = string.IsNullOrWhiteSpace(fieldName) ? "id" : fieldName;
+        var cacheKey = $"{fieldName.ToLowerInvariant()}_{descending}";
 
-        string methodName = ascending ? nameof(Queryable.OrderBy) : nameof(Queryable.OrderByDescending);
-
-        var method = typeof(Queryable).GetMethods()
-            .First(m => m.Name == methodName && m.GetParameters().Length == 2)
-            .MakeGenericMethod(Type, property.Type);
-
-        return (IQueryable<T>)method.Invoke(null, new object[] { source, lambda })!;
+        var orderFunc = OrderExpressionCache.GetOrAdd(cacheKey, _ => CreateOrderExpression(fieldName, descending));
+        return orderFunc(source);
     }
 
     /// <summary>
-    /// Filters an IQueryable collection based on a dictionary of field-value pairs.
+    /// Filters an IQueryable collection based on field-value pairs with optimized expression building.
     /// </summary>
-    /// <param name="source">The source IQueryable collection.</param>
-    /// <param name="filters">Dictionary of field names and their corresponding filter values.</param>
-    /// <returns>A filtered IQueryable collection.</returns>
-    /// <remarks>
-    /// Combines all filters using AND logic, with case-insensitive string matching and automatic type conversion.
-    /// </remarks>
     public static IQueryable<T> FilterByFields(IQueryable<T> source, Dictionary<string, string>? filters)
     {
-        if (filters is null || filters.Count == 0) return source;
-
-        var parameter = Expression.Parameter(Type, "x");
-        Expression? combinedExpression = null;
-
-        foreach (var (fieldName, value) in filters)
+        if (filters?.Count > 0)
         {
-            var property = Type.GetProperty(fieldName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (property == null) continue;
-
-            Expression propertyExpression = Expression.Property(parameter, property);
-            Expression condition;
-
-            // Handle boolean types specifically
-            if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?))
-            {
-                if (bool.TryParse(value, out var boolValue))
-                {
-                    var boolConstant = Expression.Constant(boolValue, property.PropertyType);
-                    condition = Expression.Equal(propertyExpression, boolConstant);
-                }
-                else
-                {
-                    continue; // Skip invalid boolean values
-                }
-            }
-            else
-            {
-                // Original string contains logic for non-boolean types
-                if (property.PropertyType != StringType)
-                {
-                    propertyExpression = Expression.Call(propertyExpression, ToStringMethod);
-                }
-
-                var constant = Expression.Constant(value);
-                condition = Expression.Call(propertyExpression, ContainsMethod, constant);
-            }
-
-            combinedExpression = combinedExpression == null
-                ? condition
-                : Expression.AndAlso(combinedExpression, condition);
+            var expression = BuildFilterExpression(filters);
+            if (expression != null)
+                source = source.Where(expression);
         }
-
-        if (combinedExpression == null) return source;
-
-        var lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
-        return source.Where(lambda);
+        return source;
     }
 
     /// <summary>
-    /// Filters an IQueryable collection by a date range on a specified field.
+    /// Filters by date range with optimized expression building.
     /// </summary>
-    /// <param name="source">The source IQueryable collection.</param>
-    /// <param name="fieldName">The name of the date field to filter by.</param>
-    /// <param name="dateFrom">The start date (inclusive). If null or DateTime.Min, no lower bound is applied.</param>
-    /// <param name="dateTo">The end date (inclusive). If null or DateTime.Min, no upper bound is applied.</param>
-    /// <returns>A filtered IQueryable collection.</returns>
-    /// <remarks>
-    /// Returns the source collection unchanged if both dateFrom and dateTo are null or DateTime.Min.
-    /// Supports both DateTime and DateTime? properties.
-    /// </remarks>
-    /// <exception cref="ArgumentException">Thrown when the specified field is not found or is not a date type.</exception>
     public static IQueryable<T> FilterByDateRange(IQueryable<T> source, string fieldName, DateTime? dateFrom, DateTime? dateTo)
     {
-        // Treat DateTime.Min as null (no filter)
-        var effectiveDateFrom = dateFrom.HasValue && dateFrom.Value != DateTime.MinValue ? dateFrom : null;
-        var effectiveDateTo = dateTo.HasValue && dateTo.Value != DateTime.MinValue ? dateTo : null;
+        if (string.IsNullOrWhiteSpace(fieldName) ||
+            (!IsValidDate(dateFrom) && !IsValidDate(dateTo)))
+            return source;
 
-        if (!effectiveDateFrom.HasValue && !effectiveDateTo.HasValue) return source;
-        if (string.IsNullOrWhiteSpace(fieldName)) return source;
-
-        var property = Type.GetProperty(fieldName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-        if (property == null)
-            throw new ArgumentException($"Property '{fieldName}' not found on type '{Type.Name}'.");
-
-        if (property.PropertyType != DateTimeType && property.PropertyType != NullableDateTimeType)
-            throw new ArgumentException($"Property '{fieldName}' is not a DateTime or DateTime? type.");
-
-        var parameter = Expression.Parameter(Type, "x");
-        var propertyExpression = Expression.Property(parameter, property);
-        Expression? combinedExpression = null;
-
-        // Handle DateFrom (greater than or equal)
-        if (effectiveDateFrom.HasValue)
-        {
-            var fromConstant = Expression.Constant(effectiveDateFrom.Value, DateTimeType);
-            Expression fromCondition;
-
-            if (property.PropertyType == NullableDateTimeType)
-            {
-                // For nullable DateTime: x.Date.HasValue && x.Date.Value >= dateFrom
-                var hasValueProperty = Expression.Property(propertyExpression, "HasValue");
-                var valueProperty = Expression.Property(propertyExpression, "Value");
-                var dateComparison = Expression.GreaterThanOrEqual(valueProperty, fromConstant);
-                fromCondition = Expression.AndAlso(hasValueProperty, dateComparison);
-            }
-            else
-            {
-                // For non-nullable DateTime: x.Date >= dateFrom
-                fromCondition = Expression.GreaterThanOrEqual(propertyExpression, fromConstant);
-            }
-
-            combinedExpression = fromCondition;
-        }
-
-        // Handle DateTo (less than or equal)
-        if (effectiveDateTo.HasValue)
-        {
-            var toConstant = Expression.Constant(effectiveDateTo.Value, DateTimeType);
-            Expression toCondition;
-
-            if (property.PropertyType == NullableDateTimeType)
-            {
-                // For nullable DateTime: x.Date.HasValue && x.Date.Value <= dateTo
-                var hasValueProperty = Expression.Property(propertyExpression, "HasValue");
-                var valueProperty = Expression.Property(propertyExpression, "Value");
-                var dateComparison = Expression.LessThanOrEqual(valueProperty, toConstant);
-                toCondition = Expression.AndAlso(hasValueProperty, dateComparison);
-            }
-            else
-            {
-                // For non-nullable DateTime: x.Date <= dateTo
-                toCondition = Expression.LessThanOrEqual(propertyExpression, toConstant);
-            }
-
-            combinedExpression = combinedExpression == null
-                ? toCondition
-                : Expression.AndAlso(combinedExpression, toCondition);
-        }
-
-        if (combinedExpression == null) return source;
-
-        var lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
-        return source.Where(lambda);
+        var expression = BuildDateRangeExpression(fieldName, dateFrom, dateTo);
+        return expression != null ? source.Where(expression) : source;
     }
 
     /// <summary>
-    /// Applies both field filters and date range filter to an IQueryable collection.
+    /// Combines field and date filtering in a single operation.
     /// </summary>
-    /// <param name="source">The source IQueryable collection.</param>
-    /// <param name="filters">Dictionary of field names and their corresponding filter values.</param>
-    /// <param name="dateField">The name of the date field to filter by.</param>
-    /// <param name="dateFrom">The start date (inclusive). If null, no lower bound is applied.</param>
-    /// <param name="dateTo">The end date (inclusive). If null, no upper bound is applied.</param>
-    /// <returns>A filtered IQueryable collection.</returns>
-    /// <remarks>
-    /// Combines field filters and date range filter using AND logic.
-    /// </remarks>
     public static IQueryable<T> FilterByFieldsAndDate(IQueryable<T> source,
         Dictionary<string, string>? filters,
         string? dateField,
         DateTime? dateFrom,
         DateTime? dateTo)
     {
-        // Apply field filters first
-        source = FilterByFields(source, filters);
+        var expressions = new List<Expression<Func<T, bool>>>();
 
-        // Apply date range filter if date field is specified
+        // Build field filter expression
+        var fieldExpression = BuildFilterExpression(filters);
+        if (fieldExpression != null)
+            expressions.Add(fieldExpression);
+
+        // Build date range expression
         if (!string.IsNullOrWhiteSpace(dateField))
         {
-            source = FilterByDateRange(source, dateField, dateFrom, dateTo);
+            var dateExpression = BuildDateRangeExpression(dateField, dateFrom, dateTo);
+            if (dateExpression != null)
+                expressions.Add(dateExpression);
         }
 
-        return source;
+        // Combine all expressions
+        return expressions.Count switch
+        {
+            0 => source,
+            1 => source.Where(expressions[0]),
+            _ => source.Where(CombineExpressions(expressions))
+        };
     }
 
+    #region Private Methods
+
+    private static Func<IQueryable<T>, IQueryable<T>> CreateOrderExpression(string fieldName, bool descending)
+    {
+        var parameter = Expression.Parameter(Type, "x");
+        var property = Expression.Property(parameter, GetProperty(fieldName));
+        var lambda = Expression.Lambda(property, parameter);
+
+        var methodName = descending ? nameof(Queryable.OrderByDescending) : nameof(Queryable.OrderBy);
+        var method = typeof(Queryable).GetMethods()
+            .First(m => m.Name == methodName && m.GetParameters().Length == 2)
+            .MakeGenericMethod(Type, property.Type);
+
+        return source => (IQueryable<T>)method.Invoke(null, [source, lambda])!;
+    }
+
+    private static Expression<Func<T, bool>>? BuildFilterExpression(Dictionary<string, string>? filters)
+    {
+        if (filters?.Count == 0) return null;
+
+        var parameter = Expression.Parameter(Type, "x");
+        var conditions = new List<Expression>();
+
+        foreach (var (fieldName, value) in filters!)
+        {
+            if (!TryGetProperty(fieldName, out var property)) continue;
+
+            var condition = CreateFieldCondition(parameter, property, value);
+            if (condition != null)
+                conditions.Add(condition);
+        }
+
+        return conditions.Count == 0 ? null :
+            Expression.Lambda<Func<T, bool>>(CombineWithAnd(conditions), parameter);
+    }
+
+    private static Expression<Func<T, bool>>? BuildDateRangeExpression(string fieldName, DateTime? dateFrom, DateTime? dateTo)
+    {
+        if (!TryGetProperty(fieldName, out var property) || !IsDateTimeProperty(property))
+            return null;
+
+        var parameter = Expression.Parameter(Type, "x");
+        var propertyExpression = Expression.Property(parameter, property);
+        var conditions = new List<Expression>();
+
+        var effectiveDateFrom = IsValidDate(dateFrom) ? dateFrom : null;
+        var effectiveDateTo = IsValidDate(dateTo) ? dateTo : null;
+
+        if (effectiveDateFrom.HasValue)
+            conditions.Add(CreateDateCondition(propertyExpression, property.PropertyType, effectiveDateFrom.Value, true));
+
+        if (effectiveDateTo.HasValue)
+            conditions.Add(CreateDateCondition(propertyExpression, property.PropertyType, effectiveDateTo.Value, false));
+
+        return conditions.Count == 0 ? null :
+            Expression.Lambda<Func<T, bool>>(CombineWithAnd(conditions), parameter);
+    }
+
+    private static Expression? CreateFieldCondition(ParameterExpression parameter, PropertyInfo property, string value)
+    {
+        Expression propertyExpression = Expression.Property(parameter, property);
+
+        // Handle boolean types
+        if (IsBooleanProperty(property))
+        {
+            return bool.TryParse(value, out var boolValue)
+                ? Expression.Equal(propertyExpression, Expression.Constant(boolValue, property.PropertyType))
+                : null;
+        }
+
+        // Handle string contains for other types
+        if (property.PropertyType != typeof(string))
+            propertyExpression = Expression.Call(propertyExpression, ToStringMethod);
+
+        return Expression.Call(propertyExpression, ContainsMethod, Expression.Constant(value));
+    }
+
+    private static BinaryExpression CreateDateCondition(Expression propertyExpression, Type propertyType, DateTime date, bool isFrom)
+    {
+        var dateConstant = Expression.Constant(date, typeof(DateTime));
+        var isNullable = propertyType == typeof(DateTime?);
+
+        if (isNullable)
+        {
+            var hasValue = Expression.Property(propertyExpression, "HasValue");
+            var value = Expression.Property(propertyExpression, "Value");
+            var comparison = isFrom
+                ? Expression.GreaterThanOrEqual(value, dateConstant)
+                : Expression.LessThanOrEqual(value, dateConstant);
+            return Expression.AndAlso(hasValue, comparison);
+        }
+
+        return isFrom
+            ? Expression.GreaterThanOrEqual(propertyExpression, dateConstant)
+            : Expression.LessThanOrEqual(propertyExpression, dateConstant);
+    }
+
+    private static Expression CombineWithAnd(List<Expression> conditions) =>
+        conditions.Aggregate(Expression.AndAlso);
+
+    private static Expression<Func<T, bool>> CombineExpressions(List<Expression<Func<T, bool>>> expressions)
+    {
+        var parameter = Expression.Parameter(Type, "x");
+
+        // Replace parameters in each expression with our common parameter
+        var replacedExpressions = expressions.Select(expr =>
+        {
+            var replacer = new ParameterReplacer(expr.Parameters[0], parameter);
+            return replacer.Visit(expr.Body);
+        }).ToList();
+
+        var combined = replacedExpressions.Aggregate((left, right) => Expression.AndAlso(left, right));
+        return Expression.Lambda<Func<T, bool>>(combined, parameter);
+    }
+
+    // Helper class to replace parameters in expressions
+    private class ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter) : ExpressionVisitor
+    {
+        private readonly ParameterExpression _oldParameter = oldParameter;
+        private readonly ParameterExpression _newParameter = newParameter;
+
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return node == _oldParameter ? _newParameter : base.VisitParameter(node);
+        }
+    }
+
+    private static bool TryGetProperty(string fieldName, out PropertyInfo property)
+    {
+        try
+        {
+            property = GetProperty(fieldName);
+            return true;
+        }
+        catch
+        {
+            property = null!;
+            return false;
+        }
+    }
+
+    private static bool IsValidDate(DateTime? date) =>
+        date.HasValue && date.Value != DateTime.MinValue;
+
+    private static bool IsBooleanProperty(PropertyInfo property) =>
+        property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?);
+
+    private static bool IsDateTimeProperty(PropertyInfo property) =>
+        property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?);
+
+    #endregion
 }

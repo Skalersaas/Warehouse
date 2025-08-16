@@ -1,4 +1,4 @@
-using Api.Middleware;
+﻿using Api.Middleware;
 using Application.Interfaces;
 using Application.Models.ReceiptDocument;
 using Application.Models.ReceiptItem;
@@ -54,8 +54,7 @@ static void ConfigureApp(WebApplication app)
         context.Database.Migrate();
     }
     app.UseCors(builder =>
-        builder.WithOrigins("http://localhost:3000",
-                            "https://crm-dashboard-umber-sigma.vercel.app")
+        builder.WithOrigins("http://localhost:5173")
                 .AllowAnyMethod()
                 .AllowAnyHeader());
     app.UseRewriter(new RewriteOptions()
@@ -129,12 +128,28 @@ static void RegisterMappings()
         .Map(dest => dest.ResourceName, src => src.Resource.Name)
         .Map(dest => dest.UnitName, src => src.Unit.Name)
     );
-
+    Mapper.RegisterMapping<UpdateReceiptDocumentDto, ReceiptDocument>(map => map
+        .MapWith(dest => dest.Items, src => [.. src.Items
+            .Select(i =>
+            {
+                var entity = Mapper.AutoMap<ReceiptItem, UpdateReceiptItemDto>(i);
+                entity.DocumentId = src.Id;
+                return entity;
+            })])
+    );
     Mapper.RegisterMapping<ShipmentDocument, ShipmentDocumentResponseDto>(map => map
         .Map(dest => dest.Items, src => src.Items.Select(item => item.ToResponseDto()))
         .Map(dest => dest.ClientName, src => src.Client.Name)
     );
-
+    Mapper.RegisterMapping<UpdateShipmentDocumentDto, ShipmentDocument>(map => map
+        .MapWith(dest => dest.Items, src => [.. src.Items
+                .Select(i =>
+                {
+                    var entity = Mapper.AutoMap<ShipmentItem, UpdateShipmentItemDto>(i);
+                    entity.DocumentId = src.Id;
+                    return entity;
+                })])
+    );
     Mapper.RegisterMapping<ShipmentItem, ShipmentItemResponseDto>(map => map
         .Map(dest => dest.ResourceName, src => src.Resource.Name)
         .Map(dest => dest.UnitName, src => src.Unit.Name)
@@ -144,6 +159,8 @@ static void RegisterMappings()
         .Map(dest => dest.ResourceName, src => src.Resource.Name)
         .Map(dest => dest.UnitName, src => src.Unit.Name)
     );
+
+    
 }
 
 #endregion

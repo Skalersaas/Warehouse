@@ -4,8 +4,6 @@ namespace Application.Models.ReceiptItem;
 
 public class UpdateReceiptItemDto
 {
-    public int Id { get; set; }
-    
     [Required]
     [Range(1, int.MaxValue)]
     public int ResourceId { get; set; }

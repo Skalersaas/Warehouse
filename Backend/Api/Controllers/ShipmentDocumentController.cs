@@ -39,6 +39,20 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
             ? ApiResponseFactory.Ok(result.Data.list.Select(model => model.ToResponseDto()), result.Count)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
+    public override async Task<IActionResult> GetById(int id)
+    {
+        var result = await _service.GetByIdAsync(id,
+            query => query
+            .Include(s => s.Client)
+            .Include(s => s.Items)
+            .ThenInclude(i => i.Resource)
+            .Include(s => s.Items)
+            .ThenInclude(i => i.Unit));
+
+        return result.Success
+            ? ApiResponseFactory.Ok(result.Data.ToResponseDto())
+            : ApiResponseFactory.NotFound(result.Message);
+    }
 
     [HttpPatch("{id}/sign")]
     [ProducesResponseType<Result<object>>(StatusCodes.Status404NotFound)]
