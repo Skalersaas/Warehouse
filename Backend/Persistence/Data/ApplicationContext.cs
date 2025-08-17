@@ -67,12 +67,12 @@ public class ApplicationContext : DbContext
             entity.HasIndex(b => new { b.ResourceId, b.UnitId }).IsUnique();
 
             entity.HasOne(b => b.Resource)
-                .WithMany()
+                .WithMany(r => r.Balances)
                 .HasForeignKey(b => b.ResourceId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(b => b.Unit)
-                .WithMany()
+                .WithMany(u => u.Balances)
                 .HasForeignKey(b => b.UnitId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -96,12 +96,12 @@ public class ApplicationContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(ri => ri.Resource)
-                .WithMany()
+                .WithMany(r => r.ReceiptItems)
                 .HasForeignKey(ri => ri.ResourceId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(ri => ri.Unit)
-                .WithMany()
+                .WithMany(u => u.ReceiptItems)
                 .HasForeignKey(ri => ri.UnitId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -130,12 +130,12 @@ public class ApplicationContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(si => si.Resource)
-                .WithMany()
+                .WithMany(r => r.ShipmentItems)
                 .HasForeignKey(si => si.ResourceId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(si => si.Unit)
-                .WithMany()
+                .WithMany(u => u.ShipmentItems)
                 .HasForeignKey(si => si.UnitId)
                 .OnDelete(DeleteBehavior.Restrict);
         });

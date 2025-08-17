@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+using System.Text;
+using System.Text.Json;
 
 namespace Api.Middleware;
 
@@ -12,17 +13,17 @@ public class LoggingMiddleware(RequestDelegate next, ILogger<LoggingMiddleware> 
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip swagger endpoints
         if (context.Request.Path.StartsWithSegments("/swagger"))
         {
             await next(context);
             return;
         }
 
-        context.Request.EnableBuffering();
+        // Log request
+        var requestBody = await LogRequestAsync(context);
 
-        var requestBody = await ReadStreamAsync(context.Request.Body);
-        LogRequest(context, requestBody);
-
+        // Capture response
         var originalBodyStream = context.Response.Body;
         using var responseBodyStream = new MemoryStream();
         context.Response.Body = responseBodyStream;
@@ -30,9 +31,12 @@ public class LoggingMiddleware(RequestDelegate next, ILogger<LoggingMiddleware> 
         try
         {
             await next(context);
-            var body = await ReadStreamAsync(responseBodyStream);
-            LogResponse(context, body);
-
+            
+            // Log response
+            await LogResponseAsync(context, responseBodyStream);
+            
+            // Copy response back to original stream
+            responseBodyStream.Seek(0, SeekOrigin.Begin);
             await responseBodyStream.CopyToAsync(originalBodyStream);
         }
         finally
@@ -40,37 +44,92 @@ public class LoggingMiddleware(RequestDelegate next, ILogger<LoggingMiddleware> 
             context.Response.Body = originalBodyStream;
         }
     }
-    private static async Task<string> ReadStreamAsync(Stream stream)
+
+    private async Task<string> LogRequestAsync(HttpContext context)
     {
-        if (stream == null || stream.Length == 0)
-            return string.Empty;
-        using var reader = new StreamReader(stream, leaveOpen: true);
-        var content = await reader.ReadToEndAsync();
-        stream.Seek(0, SeekOrigin.Begin);
-        return content;
-    }
-    private void LogRequest(HttpContext context, string body)
-    {
+        var requestBody = string.Empty;
+        
         try
         {
-            var formatted = FormatJson(body);
-            logger.LogInformation("HTTP Request: {Method} {Path}\nRequest Body:\n{Body}",
-                context.Request.Method, context.Request.Path, formatted);
+            // Enable buffering so the request can be read multiple times
+            context.Request.EnableBuffering();
+            
+            // Read the request body
+            if (context.Request.Body.CanSeek)
+            {
+                context.Request.Body.Seek(0, SeekOrigin.Begin);
+            }
+            
+            using var reader = new StreamReader(
+                context.Request.Body,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 1024,
+                leaveOpen: true);
+                
+            requestBody = await reader.ReadToEndAsync();
+            
+            // Reset the stream position for the next middleware
+            context.Request.Body.Seek(0, SeekOrigin.Begin);
+            
+            // Log the request
+            var formatted = FormatJson(requestBody);
+            
+            logger.LogInformation("=== HTTP REQUEST ===");
+            logger.LogInformation("Method: {Method}", context.Request.Method);
+            logger.LogInformation("Path: {Path}", context.Request.Path);
+            logger.LogInformation("Query: {Query}", context.Request.QueryString);
+            logger.LogInformation("Content-Type: {ContentType}", context.Request.ContentType);
+            logger.LogInformation("Content-Length: {ContentLength}", context.Request.ContentLength);
+            
+            if (!string.IsNullOrEmpty(requestBody))
+            {
+                logger.LogInformation("Request Body:\n{Body}", formatted);
+            }
+            else
+            {
+                logger.LogInformation("Request Body: (empty or no body)");
+            }
+            logger.LogInformation("===================");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to log HTTP request");
         }
+        
+        return requestBody;
     }
-    private void LogResponse(HttpContext context, string body)
+
+    private async Task LogResponseAsync(HttpContext context, MemoryStream responseBodyStream)
     {
         try
         {
+            var responseBody = string.Empty;
+            
+            if (responseBodyStream.Length > 0)
+            {
+                responseBodyStream.Seek(0, SeekOrigin.Begin);
+                using var reader = new StreamReader(responseBodyStream, Encoding.UTF8, leaveOpen: true);
+                responseBody = await reader.ReadToEndAsync();
+            }
+            
             var level = context.Response.StatusCode >= 400 ? LogLevel.Error : LogLevel.Information;
-            var formatted = FormatJson(body);
-
-            logger.Log(level, "HTTP Response: {StatusCode}\nResponse Body:\n{Body}",
-                context.Response.StatusCode, formatted);
+            var formatted = FormatJson(responseBody);
+            
+            logger.Log(level, "=== HTTP RESPONSE ===");
+            logger.Log(level, "Status Code: {StatusCode}", context.Response.StatusCode);
+            logger.Log(level, "Content-Type: {ContentType}", context.Response.ContentType);
+            logger.Log(level, "Content-Length: {ContentLength}", responseBodyStream.Length);
+            
+            if (!string.IsNullOrEmpty(responseBody))
+            {
+                logger.Log(level, "Response Body:\n{Body}", formatted);
+            }
+            else
+            {
+                logger.Log(level, "Response Body: (empty)");
+            }
+            logger.Log(level, "====================");
         }
         catch (Exception ex)
         {
@@ -78,17 +137,20 @@ public class LoggingMiddleware(RequestDelegate next, ILogger<LoggingMiddleware> 
         }
     }
 
-
     private static string FormatJson(string json)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(json)) return json;
+            if (string.IsNullOrWhiteSpace(json)) 
+                return json;
+                
+            // Try to parse and format as JSON
             var doc = JsonSerializer.Deserialize<JsonElement>(json);
             return JsonSerializer.Serialize(doc, JsonOptions);
         }
         catch
         {
+            // If it's not valid JSON, return as-is
             return json;
         }
     }
