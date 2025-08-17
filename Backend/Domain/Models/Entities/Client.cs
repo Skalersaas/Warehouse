@@ -8,5 +8,4 @@ public class Client : IModel, IArchivable
     public string Address { get; set; } = null!;
     public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
 }

@@ -7,7 +7,6 @@ public class Resource : IModel, IArchivable
     public string Name { get; set; } = null!;
     public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public virtual ICollection<ReceiptItem> ReceiptItems { get; set; }
     public virtual ICollection<ShipmentItem> ShipmentItems { get; set; }

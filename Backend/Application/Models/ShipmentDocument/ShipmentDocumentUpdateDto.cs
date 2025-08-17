@@ -17,10 +17,5 @@ public class UpdateShipmentDocumentDto : IModel
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "Client is required")]
     public int ClientId { get; set; }
-    
-    [Required]
-    public DateTime Date { get; set; }
-    
-    public ShipmentStatus Status { get; set; }
     public ICollection<UpdateShipmentItemDto> Items { get; set; } = [];
 }

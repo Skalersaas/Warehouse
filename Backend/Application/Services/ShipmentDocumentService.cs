@@ -39,11 +39,21 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             if (!itemsValidation.Success)
                 return Result<ShipmentDocument>.ErrorResult(itemsValidation.Message);
 
-            var result = await base.CreateAsync(entity);
+            var model = Mapper.AutoMap<ShipmentDocument, CreateShipmentDocumentDto>(entity);
 
-            return result.Success
-                ? Result<ShipmentDocument>.SuccessResult(result.Data, "Shipment document created successfully")
-                : Result<ShipmentDocument>.ErrorResult("Failed to create shipment document");
+            var created = _context.ShipmentDocuments.Add(model);
+            await _context.SaveChangesAsync();
+
+            if (created.Entity == null)
+                return Result<ShipmentDocument>.ErrorResult("Failed to create shipment document");
+            
+            return created.Entity == null
+                ?  Result<ShipmentDocument>.ErrorResult("Failed to create shipment document")
+                :  Result<ShipmentDocument>.SuccessResult(created.Entity, "Shipment document created successfully");
+        }
+        catch (DbUpdateException)
+        {
+            return Result<ShipmentDocument>.ErrorResult("Document number cannot be repetitive");
         }
         catch (Exception ex)
         {
@@ -110,13 +120,11 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
         {
             // Chain operations with early returns
             var doc = await ValidateAndGetDocumentForSigning(id);
-            if (!doc.Success) return Result<ShipmentDocument>.ErrorResult(doc.Message);
+            if (!doc.Success) return Result<ShipmentDocument>.ErrorResult(doc.Message, doc.Errors);
 
-            var stockValidation = await ValidateStockAvailability(doc.Data.Items);
-            if (!stockValidation.Success) return Result<ShipmentDocument>.ErrorResult(stockValidation.Message);
 
             var balanceUpdate = await ProcessShipmentBalanceChanges(doc.Data.Items);
-            if (!balanceUpdate.Success) return Result<ShipmentDocument>.ErrorResult(balanceUpdate.Message);
+            if (!balanceUpdate.Success) return Result<ShipmentDocument>.ErrorResult(balanceUpdate.Message, balanceUpdate.Errors);
 
             return await SignDocumentAndUpdate(doc.Data);
         }
@@ -127,6 +135,23 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
         }
     }
 
+    public override async Task<Result> DeleteAsync(int id)
+    {
+        try
+        {
+            var doc = await _context.ShipmentDocuments.FirstOrDefaultAsync(x => x.Id == id);
+
+            if (doc == null) return Result.ErrorResult("Shipment document not found");
+            return (doc.Status == ShipmentStatus.Signed)
+                ? Result.ErrorResult("Signed document cannot be deleted")
+                : Result.SuccessResult("Shipment document deleted");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting shipment document with ID {Id}", id);
+            return Result.ErrorResult("An error occurred while deleting the document");
+        }
+    }
     /// <summary>
     /// Revokes a signed shipment document, restoring the balances.
     /// </summary>
@@ -200,55 +225,24 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             _ => Result<ShipmentDocument>.SuccessResult(doc)
         };
     }
-
-    private async Task<Result> ValidateStockAvailability(ICollection<ShipmentItem> items)
-    {
-        // Use parallel processing for stock checks if items are many
-        if (items.Count > 10)
-        {
-            var stockTasks = items.Select(async item =>
-            {
-                var hasStock = await _balance.HasSufficientStockAsync(item.ResourceId, item.UnitId, item.Quantity);
-                return new { item, hasStock };
-            });
-
-            var results = await Task.WhenAll(stockTasks);
-            var insufficient = results.FirstOrDefault(r => !r.hasStock.Success || !r.hasStock.Data);
-
-            return insufficient != null
-                ? Result.ErrorResult($"Insufficient stock: Resource {insufficient.item.ResourceId}, Unit {insufficient.item.UnitId}, Required: {insufficient.item.Quantity}")
-                : Result.SuccessResult();
-        }
-
-        // Sequential processing for smaller collections
-        foreach (var item in items)
-        {
-            var hasStock = await _balance.HasSufficientStockAsync(item.ResourceId, item.UnitId, item.Quantity);
-            if (!hasStock.Success || !hasStock.Data)
-                return Result.ErrorResult($"Insufficient stock: Resource {item.ResourceId}, Unit {item.UnitId}, Required: {item.Quantity}");
-        }
-
-        return Result.SuccessResult();
-    }
-
     private async Task<Result> ProcessShipmentBalanceChanges(ICollection<ShipmentItem> items)
     {
-        var changes = items.Select(i => (i.ResourceId, i.UnitId, -i.Quantity));
-        var result = await _balance.BulkUpdateBalancesAsync(changes);
+        var changes = items.Select(i => (i.ResourceId, i.UnitId, -i.Quantity)).ToList();
+        var result = await _balance.BulkUpdateAsync(changes);
 
         return result.Success
             ? Result.SuccessResult()
-            : Result.ErrorResult($"Failed to update balances: {result.Message}");
+            : Result.ErrorResult($"Failed to update balances: {result.Message}", result.Errors);
     }
 
     private async Task<Result> RestoreBalances(ICollection<ShipmentItem> items)
     {
-        var restorations = items.Select(i => (i.ResourceId, i.UnitId, i.Quantity));
-        var result = await _balance.BulkUpdateBalancesAsync(restorations);
+        var restorations = items.Select(i => (i.ResourceId, i.UnitId, i.Quantity)).ToList();
+        var result = await _balance.BulkUpdateAsync(restorations);
 
         return result.Success
             ? Result.SuccessResult()
-            : Result.ErrorResult($"Failed to restore balances: {result.Message}");
+            : Result.ErrorResult($"Failed to restore balances: {result.Message}", result.Errors);
     }
 
     private async Task<Result<ShipmentDocument>> SignDocumentAndUpdate(ShipmentDocument doc)

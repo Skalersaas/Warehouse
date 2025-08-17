@@ -12,6 +12,5 @@ public class ShipmentDocumentResponseDto
     public DateTime Date { get; set; }
     public ShipmentStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
     public IEnumerable<ShipmentItemResponseDto>? Items { get; set; }
 }

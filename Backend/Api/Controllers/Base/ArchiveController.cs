@@ -45,7 +45,7 @@ public class ArchiveController<TModel, TCreate, TUpdate, TResponse>(IArchiveServ
         
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Success)
+            ? ApiResponseFactory.OkMessage(result.Message)
             : ApiResponseFactory.NotFound(result.Message);
     }
 }

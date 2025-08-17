@@ -8,8 +8,6 @@ public class Unit : IModel, IArchivable
     public string Name { get; set; }
     public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
-
     public virtual ICollection<ReceiptItem> ReceiptItems { get; set; }
     public virtual ICollection<ShipmentItem> ShipmentItems { get; set; }
     public virtual ICollection<Balance> Balances { get; set; }

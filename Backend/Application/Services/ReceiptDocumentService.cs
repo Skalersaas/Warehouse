@@ -46,13 +46,13 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
 
             // Update balances for all items
             var items = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity)).ToList();
-            var balanceResult = await _balance.BulkUpdateBalancesAsync(items);
+            var balanceResult = await _balance.BulkUpdateAsync(items);
 
             if (!balanceResult.Success)
             {
                 _logger.LogWarning("Receipt document created but balance update failed: {Error}", balanceResult.Message);
                 return Result<ReceiptDocument>.SuccessResult(created.Entity,
-                    "Receipt document created but balance update had issues: " + balanceResult.Message);
+                    "Receipt document was not created: " + balanceResult.Message);
             }
 
             return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created and balances updated successfully");
@@ -60,7 +60,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
 
         catch (DbUpdateException)
         {
-            return Result<ReceiptDocument>.ErrorResult("Cannot delete this entity because it is referenced by other records.");
+            return Result<ReceiptDocument>.ErrorResult("Document number cannot be repetitive");
         }
         catch (Exception ex)
         {
@@ -100,21 +100,20 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             // Calculate balance changes
             var netChanges = CalculateBalanceChanges(existing.Items, entity.Items);
 
-            Mapper.AutoMapToExisting(entity, existing);
-            await _context.SaveChangesAsync();
 
             // Apply balance changes if any
             if (netChanges.Count != 0)
             {
-                var balanceResult = await _balance.BulkUpdateBalancesAsync(netChanges);
+                var balanceResult = await _balance.BulkUpdateAsync(netChanges);
                 if (!balanceResult.Success)
                 {
-                    _logger.LogWarning("Receipt document updated but balance update failed: {Error}", balanceResult.Message);
-                    return Result<ReceiptDocument>.SuccessResult(existing,
-                        "Receipt document updated but balance update had issues: " + balanceResult.Message);
+                    _logger.LogWarning("Balance update failed: {Error}", balanceResult.Message);
+                    return Result<ReceiptDocument>.ErrorResult("Balance update had issues: " + balanceResult.Message);
                 }
             }
 
+            Mapper.AutoMapToExisting(entity, existing);
+            await _context.SaveChangesAsync();
             return Result<ReceiptDocument>.SuccessResult(existing, "Receipt document updated successfully");
         }
         catch (Exception ex)
@@ -141,22 +140,13 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             }
 
             // Check if we have sufficient stock to reverse the operations
-            var stockValidation = await ValidateStockForDeletion(existing.Items);
+            var netChanges = existing.Items.Select(x => (x.ResourceId, x.UnitId, -x.Quantity)).ToList();
+            var stockValidation = await _balance.BulkUpdateAsync(netChanges);
             if (!stockValidation.Success)
                 return stockValidation;
 
             _context.ReceiptDocuments.Remove(existing);
             await _context.SaveChangesAsync();
-
-            // Reverse the balance changes
-            var balanceReversals = existing.Items.Select(item => (item.ResourceId, item.UnitId, -item.Quantity));
-            var balanceResult = await _balance.BulkUpdateBalancesAsync(balanceReversals);
-
-            if (!balanceResult.Success)
-            {
-                _logger.LogError("Receipt document deleted but balance reversal failed: {Error}", balanceResult.Message);
-                return Result.ErrorResult("Receipt document deleted but balance reversal failed");
-            }
 
             return Result.SuccessResult("Receipt document deleted and balances updated successfully");
         }
@@ -189,7 +179,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
         };
     }
 
-    private List<(int ResourceId, int UnitId, decimal Quantity)> CalculateBalanceChanges(
+    private static List<(int ResourceId, int UnitId, decimal Quantity)> CalculateBalanceChanges(
         ICollection<ReceiptItem> existingItems,
         IEnumerable<UpdateReceiptItemDto> newItems)
     {
@@ -215,17 +205,5 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             .ToList();
     }
 
-    private async Task<Result> ValidateStockForDeletion(ICollection<ReceiptItem> items)
-    {
-        foreach (var item in items)
-        {
-            var stockResult = await _balance.CheckStockAsync(item.ResourceId, item.UnitId, item.Quantity);
-            if (!stockResult.Success)
-            {
-                return Result.ErrorResult($"Insufficient stock to reverse item: ResourceId {stockResult.Data.Resource.Name}, UnitId {stockResult.Data.Unit.Name}. Cannot delete receipt document.");
-            }
-        }
-        return Result.SuccessResult();
-    }
     #endregion
 }
