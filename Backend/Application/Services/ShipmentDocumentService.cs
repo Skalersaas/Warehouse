@@ -82,11 +82,16 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             );
             if (!itemsValidation.Success)
                 return Result<ShipmentDocument>.ErrorResult(itemsValidation.Message);
-
+            var client = await _context.Clients.FirstOrDefaultAsync(x => x.Id == entity.ClientId);
+            existing.Client = client;
             Mapper.AutoMapToExisting(entity, existing);
             await _context.SaveChangesAsync();
 
             return Result<ShipmentDocument>.SuccessResult(existing, "Shipment document updated successfully");
+        }
+        catch (DbUpdateException)
+        {
+            return Result<ShipmentDocument>.ErrorResult("Cannot update this entity because it violates foreign key");
         }
         catch (Exception ex)
         {

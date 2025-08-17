@@ -5,6 +5,7 @@ using Utilities.DataManipulation;
 using Utilities.Responses;
 using Microsoft.Extensions.Logging;
 using Persistence.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services;
 
@@ -28,7 +29,8 @@ public class BalanceService(ApplicationContext repository, ILogger<BalanceServic
                     { nameof(Balance.ResourceId), resourceId.ToString() },
                     { nameof(Balance.UnitId), unitId.ToString() }
                 }
-            });
+            },
+            x => x.Include(x=>x.Resource).Include(x=>x.Unit));
 
             if (!queryResult.Success)
             {
@@ -68,14 +70,43 @@ public class BalanceService(ApplicationContext repository, ILogger<BalanceServic
             }
 
             var hasSufficientStock = balanceResult.Data.Quantity >= requiredQuantity;
-            return Result<bool>.SuccessResult(hasSufficientStock, 
+            return Result<bool>.SuccessResult(hasSufficientStock,
                 hasSufficientStock ? "Sufficient stock available" : "Insufficient stock");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking stock for ResourceId {ResourceId}, UnitId {UnitId}, Required {RequiredQuantity}", 
+            _logger.LogError(ex, "Error checking stock for ResourceId {ResourceId}, UnitId {UnitId}, Required {RequiredQuantity}",
                 resourceId, unitId, requiredQuantity);
             return Result<bool>.ErrorResult("An error occurred while checking stock");
+        }
+    }
+    /// <summary>
+    /// Checks if there is sufficient stock for a given resource and unit.
+    /// </summary>
+    /// <param name="resourceId">The resource ID.</param>
+    /// <param name="unitId">The unit ID.</param>
+    /// <param name="requiredQuantity">The required quantity.</param>
+    /// <returns>True if sufficient stock exists, false otherwise.</returns>
+    public async Task<Result<Balance>> CheckStockAsync(int resourceId, int unitId, decimal requiredQuantity)
+    {
+        try
+        {
+            var balanceResult = await GetBalanceAsync(resourceId, unitId);
+            if (!balanceResult.Success)
+            {
+                return Result<Balance>.SuccessResult(null, "No balance found - insufficient stock");
+            }
+
+            var hasSufficientStock = balanceResult.Data.Quantity >= requiredQuantity;
+            return hasSufficientStock
+                ? Result<Balance>.SuccessResult(balanceResult.Data, "Sufficient stock available")
+                : Result<Balance>.ErrorResult("Insufficient stock");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking stock for ResourceId {ResourceId}, UnitId {UnitId}, Required {RequiredQuantity}",
+                resourceId, unitId, requiredQuantity);
+            return Result<Balance>.ErrorResult("An error occurred while checking stock");
         }
     }
 
@@ -123,6 +154,7 @@ public class BalanceService(ApplicationContext repository, ILogger<BalanceServic
                     Quantity = quantityChange
                 };
                 var created = _context.Balances.Add(newBalance);
+                await _context.SaveChangesAsync();
                 return created != null 
                     ? Result.SuccessResult("New balance created successfully")
                     : Result.ErrorResult("Failed to create new balance");

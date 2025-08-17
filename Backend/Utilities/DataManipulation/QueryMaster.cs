@@ -154,21 +154,43 @@ public static class QueryMaster<T>
 
     private static Expression? CreateFieldCondition(ParameterExpression parameter, PropertyInfo property, string value)
     {
+        // Split comma-separated values and trim whitespace
+        var values = value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                          .Select(v => v.Trim())
+                          .Where(v => !string.IsNullOrEmpty(v))
+                          .ToList();
+
+        if (values.Count == 0) return null;
+
         Expression propertyExpression = Expression.Property(parameter, property);
 
         // Handle boolean types
         if (IsBooleanProperty(property))
         {
-            return bool.TryParse(value, out var boolValue)
-                ? Expression.Equal(propertyExpression, Expression.Constant(boolValue, property.PropertyType))
-                : null;
+            var boolConditions = new List<Expression>();
+
+            foreach (var val in values)
+            {
+                if (bool.TryParse(val, out var boolValue))
+                {
+                    boolConditions.Add(Expression.Equal(propertyExpression, Expression.Constant(boolValue, property.PropertyType)));
+                }
+            }
+
+            return boolConditions.Count == 0 ? null : CombineWithOr(boolConditions);
         }
 
         // Handle string contains for other types
-        if (property.PropertyType != typeof(string))
-            propertyExpression = Expression.Call(propertyExpression, ToStringMethod);
+        var stringPropertyExpression = property.PropertyType != typeof(string)
+            ? Expression.Call(propertyExpression, ToStringMethod)
+            : propertyExpression;
 
-        return Expression.Call(propertyExpression, ContainsMethod, Expression.Constant(value));
+        // Create OR conditions for each value
+        var orConditions = values.Select(val =>
+            Expression.Call(stringPropertyExpression, ContainsMethod, Expression.Constant(val))
+        ).Cast<Expression>().ToList();
+
+        return CombineWithOr(orConditions);
     }
 
     private static BinaryExpression CreateDateCondition(Expression propertyExpression, Type propertyType, DateTime date, bool isFrom)
@@ -193,6 +215,9 @@ public static class QueryMaster<T>
 
     private static Expression CombineWithAnd(List<Expression> conditions) =>
         conditions.Aggregate(Expression.AndAlso);
+
+    private static Expression CombineWithOr(List<Expression> conditions) =>
+        conditions.Count == 1 ? conditions[0] : conditions.Aggregate(Expression.OrElse);
 
     private static Expression<Func<T, bool>> CombineExpressions(List<Expression<Func<T, bool>>> expressions)
     {

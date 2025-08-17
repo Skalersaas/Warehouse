@@ -21,6 +21,12 @@ public class ApiResponseFactory
         return new(response) { StatusCode = StatusCodes.Status200OK };
     }
 
+    public static ObjectResult Success(string message)
+    {
+        var response = Result.SuccessResult(message);
+        return new(response) { StatusCode = StatusCodes.Status200OK };
+    }
+
     /// <summary>
     /// Creates an error response with the specified status code.
     /// </summary>
@@ -43,6 +49,9 @@ public class ApiResponseFactory
     /// <returns>An ObjectResult with 200 OK status code.</returns>
     public static ObjectResult Ok<T>(T? data, int? fullCount = null)
         => Success(data, fullCount);
+
+    public static ObjectResult OkMessage(string message)
+        => Success(message);
 
     /// <summary>
     /// Creates a 400 Bad Request response.

@@ -15,15 +15,12 @@ public class UpdateShipmentDocumentDto : IModel
     public string Number { get; set; } = string.Empty;
     
     [Required]
-    [Range(1, int.MaxValue)]
+    [Range(1, int.MaxValue, ErrorMessage = "Client is required")]
     public int ClientId { get; set; }
     
     [Required]
     public DateTime Date { get; set; }
     
     public ShipmentStatus Status { get; set; }
-    
-    [Required]
-    [MinLength(1)]
     public ICollection<UpdateShipmentItemDto> Items { get; set; } = [];
 }

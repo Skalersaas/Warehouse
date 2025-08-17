@@ -136,7 +136,7 @@ public static class DocumentValidationHelper
     public static async Task<Result> ValidateClientAsync(ApplicationContext context, int clientId)
     {
         if (clientId <= 0)
-            return Result.ErrorResult("Invalid client ID");
+            return Result.ErrorResult("Invalid client");
 
         var client = await context.Clients
             .FirstOrDefaultAsync(c => c.Id == clientId);
@@ -145,7 +145,7 @@ public static class DocumentValidationHelper
             return Result.ErrorResult($"Client with ID {clientId} not found");
 
         if (client is IArchivable archivable && archivable.IsArchived)
-            return Result.ErrorResult($"Client with ID {clientId} is archived");
+            return Result.ErrorResult($"Client: {client.Name} is archived");
 
         return Result.SuccessResult();
     }

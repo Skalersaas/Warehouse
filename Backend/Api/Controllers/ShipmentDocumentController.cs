@@ -61,7 +61,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
         var result = await service.Sign(id);
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Message)
+            ? ApiResponseFactory.OkMessage(result.Message)
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
     [HttpPatch("{id}/revoke")]
@@ -71,7 +71,7 @@ public class ShipmentDocumentController(ShipmentDocumentService service) : CrudC
         var result = await service.Revoke(id);
 
         return result.Success
-            ? ApiResponseFactory.Ok(result.Message) 
+            ? ApiResponseFactory.OkMessage(result.Message) 
             : ApiResponseFactory.BadRequest(result.Message, result.Errors);
     }
 }

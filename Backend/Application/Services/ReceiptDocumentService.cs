@@ -45,7 +45,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             }
 
             // Update balances for all items
-            var items = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity));
+            var items = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity)).ToList();
             var balanceResult = await _balance.BulkUpdateBalancesAsync(items);
 
             if (!balanceResult.Success)
@@ -56,6 +56,11 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             }
 
             return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created and balances updated successfully");
+        }
+
+        catch (DbUpdateException)
+        {
+            return Result<ReceiptDocument>.ErrorResult("Cannot delete this entity because it is referenced by other records.");
         }
         catch (Exception ex)
         {
@@ -214,10 +219,10 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
     {
         foreach (var item in items)
         {
-            var stockResult = await _balance.HasSufficientStockAsync(item.ResourceId, item.UnitId, item.Quantity);
-            if (!stockResult.Success || !stockResult.Data)
+            var stockResult = await _balance.CheckStockAsync(item.ResourceId, item.UnitId, item.Quantity);
+            if (!stockResult.Success)
             {
-                return Result.ErrorResult($"Insufficient stock to reverse item: ResourceId {item.ResourceId}, UnitId {item.UnitId}. Cannot delete receipt document.");
+                return Result.ErrorResult($"Insufficient stock to reverse item: ResourceId {stockResult.Data.Resource.Name}, UnitId {stockResult.Data.Unit.Name}. Cannot delete receipt document.");
             }
         }
         return Result.SuccessResult();

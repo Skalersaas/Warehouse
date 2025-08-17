@@ -2,10 +2,7 @@ using Application.Interfaces;
 using Domain.Models.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 using Persistence.Data;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 using Utilities.DataManipulation;
 using Utilities.Responses;
 
@@ -146,7 +143,7 @@ namespace Application.Services.Base
 
                 baseQuery = model switch
                 {
-                    SearchFilterModelDates dates => QueryMaster<TModel>.FilterByFieldsAndDate(baseQuery, dates.Filters, "CreatedAt", dates.DateFrom, dates.DateTo),
+                    SearchFilterModelDates dates => QueryMaster<TModel>.FilterByFieldsAndDate(baseQuery, dates.Filters, "Date", dates.DateFrom, dates.DateTo),
                     SearchFilterModel filterModel => QueryMaster<TModel>.FilterByFields(baseQuery, filterModel.Filters),
                     _ => baseQuery
                 };

@@ -10,13 +10,11 @@ public class CreateShipmentDocumentDto
     public string Number { get; set; } = string.Empty;
     
     [Required]
-    [Range(1, int.MaxValue)]
+    [Range(1, int.MaxValue, ErrorMessage ="Client is required")]
     public int ClientId { get; set; }
-    
+
     [Required]
+    [Range(typeof(DateTime), "1900-01-01", "2100-12-31", ErrorMessage = "Date must be a valid date between 1900 and 2100")]
     public DateTime Date { get; set; }
-    
-    [Required]
-    [MinLength(1)]
     public ICollection<CreateShipmentItemDto> Items { get; set; } = [];
 }
