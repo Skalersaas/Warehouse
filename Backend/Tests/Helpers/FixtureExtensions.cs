@@ -23,30 +23,26 @@ public static class FixtureExtensions
         // Configure specific customizations for domain entities
         fixture.Customize<Domain.Models.Entities.Client>(c => c
             .Without(x => x.Id) // Let EF handle IDs
-            .Do(x => x.CreatedAt = DateTime.UtcNow)
-            .Do(x => x.UpdatedAt = null));
+            .Do(x => x.CreatedAt = DateTime.UtcNow));
 
         fixture.Customize<Domain.Models.Entities.Resource>(c => c
             .Without(x => x.Id)
             .Without(x => x.ReceiptItems) // Avoid circular references
             .Without(x => x.ShipmentItems)
             .Without(x => x.Balances)
-            .Do(x => x.CreatedAt = DateTime.UtcNow)
-            .Do(x => x.UpdatedAt = DateTime.UtcNow));
+            .Do(x => x.CreatedAt = DateTime.UtcNow));
 
         fixture.Customize<Domain.Models.Entities.Unit>(c => c
             .Without(x => x.Id)
             .Without(x => x.ReceiptItems) // Avoid circular references
             .Without(x => x.ShipmentItems)
             .Without(x => x.Balances)
-            .Do(x => x.CreatedAt = DateTime.UtcNow)
-            .Do(x => x.UpdatedAt = null));
+            .Do(x => x.CreatedAt = DateTime.UtcNow));
 
         fixture.Customize<Domain.Models.Entities.ReceiptDocument>(c => c
             .Without(x => x.Id)
             .Without(x => x.Items) // Avoid circular references
             .Do(x => x.CreatedAt = DateTime.UtcNow)
-            .Do(x => x.UpdatedAt = null)
             .Do(x => x.Items = new List<Domain.Models.Entities.ReceiptItem>()));
 
         fixture.Customize<Domain.Models.Entities.ShipmentDocument>(c => c
@@ -54,7 +50,6 @@ public static class FixtureExtensions
             .Without(x => x.Client) // Avoid circular references
             .Without(x => x.Items)
             .Do(x => x.CreatedAt = DateTime.UtcNow)
-            .Do(x => x.UpdatedAt = null)
             .Do(x => x.Items = new List<Domain.Models.Entities.ShipmentItem>()));
 
         fixture.Customize<Domain.Models.Entities.ReceiptItem>(c => c

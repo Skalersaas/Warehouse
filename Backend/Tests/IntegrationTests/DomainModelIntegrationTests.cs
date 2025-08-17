@@ -44,24 +44,6 @@ public class DomainModelIntegrationTests
             entityType.ShouldHaveIArchivableProperties();
         }
     }
-
-    [Fact]
-    public void DocumentEntities_ShouldHaveAuditTrail()
-    {
-        // Arrange
-        var documentEntities = new[]
-        {
-            typeof(Domain.Models.Entities.ReceiptDocument),
-            typeof(Domain.Models.Entities.ShipmentDocument)
-        };
-
-        // Act & Assert
-        foreach (var entityType in documentEntities)
-        {
-            entityType.ShouldFollowAuditTrailPattern(shouldHaveUpdatedAt: true);
-        }
-    }
-
     [Fact]
     public void ItemEntities_ShouldHaveRequiredForeignKeys()
     {

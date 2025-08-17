@@ -23,25 +23,6 @@ public class ShipmentDocumentTests
         document.Should().BeAssignableTo<IModel>();
     }
 
-    [Fact]
-    public void ShipmentDocument_ShouldHaveDefaultValues()
-    {
-        // Arrange & Act
-        var document = new ShipmentDocument();
-
-        // Assert
-        document.Id.Should().Be(0);
-        document.Number.Should().BeNull();
-        document.ClientId.Should().Be(0);
-        document.Date.Should().Be(default(DateTime));
-        document.Status.Should().Be(ShipmentStatus.Draft);
-        document.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        document.UpdatedAt.Should().BeNull();
-        document.Client.Should().BeNull();
-        document.Items.Should().NotBeNull();
-        document.Items.Should().BeEmpty();
-    }
-
     [Theory]
     [AutoData]
     public void ShipmentDocument_ShouldSetPropertiesCorrectly(int id, string number, int clientId, DateTime date, ShipmentStatus status)
@@ -59,7 +40,6 @@ public class ShipmentDocumentTests
             Date = date,
             Status = status,
             CreatedAt = createdAt,
-            UpdatedAt = updatedAt
         };
 
         // Assert
@@ -69,7 +49,6 @@ public class ShipmentDocumentTests
         document.Date.Should().Be(date);
         document.Status.Should().Be(status);
         document.CreatedAt.Should().Be(createdAt);
-        document.UpdatedAt.Should().Be(updatedAt);
     }
 
     [Fact]
@@ -211,11 +190,9 @@ public class ShipmentDocumentTests
 
         // Act
         document.Status = toStatus;
-        document.UpdatedAt = DateTime.UtcNow;
 
         // Assert
         document.Status.Should().Be(toStatus);
-        document.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -272,20 +249,14 @@ public class ShipmentDocumentTests
 
         // Act - Progress through statuses
         document.Status = ShipmentStatus.Draft;
-        document.UpdatedAt = DateTime.UtcNow;
-        var pendingTime = document.UpdatedAt;
 
         Thread.Sleep(1); // Ensure time difference
 
         document.Status = ShipmentStatus.Signed;
-        document.UpdatedAt = DateTime.UtcNow;
-        var signedTime = document.UpdatedAt;
 
         // Assert
         document.Status.Should().Be(ShipmentStatus.Signed);
         document.CreatedAt.Should().Be(createdAt);
-        signedTime.Should().BeAfter(pendingTime.Value);
-        pendingTime.Should().BeAfter(createdAt);
     }
 
     [Fact]

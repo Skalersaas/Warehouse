@@ -19,7 +19,6 @@ public static class TestDataBuilder
             Address = address ?? _fixture.Create<string>(),
             IsArchived = isArchived,
             CreatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 30),
-            UpdatedAt = _fixture.Create<bool>() ? DateTime.UtcNow : null
         };
     }
 
@@ -33,7 +32,6 @@ public static class TestDataBuilder
             Name = name ?? _fixture.Create<string>(),
             IsArchived = isArchived,
             CreatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 30),
-            UpdatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 15),
             ReceiptItems = new List<ReceiptItem>(),
             ShipmentItems = new List<ShipmentItem>(),
             Balances = new List<Balance>()
@@ -50,7 +48,6 @@ public static class TestDataBuilder
             Name = name ?? _fixture.Create<string>(),
             IsArchived = isArchived,
             CreatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 30),
-            UpdatedAt = _fixture.Create<bool>() ? DateTime.UtcNow : null,
             ReceiptItems = new List<ReceiptItem>(),
             ShipmentItems = new List<ShipmentItem>(),
             Balances = new List<Balance>()
@@ -67,7 +64,6 @@ public static class TestDataBuilder
             Number = number ?? _fixture.Create<string>(),
             Date = date ?? _fixture.Create<DateTime>(),
             CreatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 30),
-            UpdatedAt = _fixture.Create<bool>() ? DateTime.UtcNow : null,
             Items = new List<ReceiptItem>()
         };
     }
@@ -85,7 +81,6 @@ public static class TestDataBuilder
             Date = date ?? _fixture.Create<DateTime>(),
             Status = _fixture.Create<Domain.Models.Enums.ShipmentStatus>(),
             CreatedAt = DateTime.UtcNow.AddDays(-_fixture.Create<int>() % 30),
-            UpdatedAt = _fixture.Create<bool>() ? DateTime.UtcNow : null,
             Items = new List<ShipmentItem>()
         };
     }

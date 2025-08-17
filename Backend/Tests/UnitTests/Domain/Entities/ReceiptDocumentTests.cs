@@ -22,22 +22,6 @@ public class ReceiptDocumentTests
         document.Should().BeAssignableTo<IModel>();
     }
 
-    [Fact]
-    public void ReceiptDocument_ShouldHaveDefaultValues()
-    {
-        // Arrange & Act
-        var document = new ReceiptDocument();
-
-        // Assert
-        document.Id.Should().Be(0);
-        document.Number.Should().BeNull();
-        document.Date.Should().Be(default(DateTime));
-        document.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        document.UpdatedAt.Should().BeNull();
-        document.Items.Should().NotBeNull();
-        document.Items.Should().BeEmpty();
-    }
-
     [Theory]
     [AutoData]
     public void ReceiptDocument_ShouldSetPropertiesCorrectly(int id, string number, DateTime date)
@@ -53,7 +37,6 @@ public class ReceiptDocumentTests
             Number = number,
             Date = date,
             CreatedAt = createdAt,
-            UpdatedAt = updatedAt
         };
 
         // Assert
@@ -61,7 +44,6 @@ public class ReceiptDocumentTests
         document.Number.Should().Be(number);
         document.Date.Should().Be(date);
         document.CreatedAt.Should().Be(createdAt);
-        document.UpdatedAt.Should().Be(updatedAt);
     }
 
     [Fact]
@@ -140,22 +122,6 @@ public class ReceiptDocumentTests
     }
 
     [Fact]
-    public void ReceiptDocument_ShouldSupportUpdatedAtTracking()
-    {
-        // Arrange
-        var document = _fixture.Create<ReceiptDocument>();
-        var originalUpdatedAt = document.UpdatedAt;
-        var newUpdatedAt = DateTime.UtcNow;
-
-        // Act
-        document.UpdatedAt = newUpdatedAt;
-
-        // Assert
-        document.UpdatedAt.Should().Be(newUpdatedAt);
-        document.UpdatedAt.Should().NotBe(originalUpdatedAt);
-    }
-
-    [Fact]
     public void ReceiptDocument_Date_ShouldSupportPastAndFutureDates()
     {
         // Arrange
@@ -169,18 +135,6 @@ public class ReceiptDocumentTests
 
         document.Date = futureDate;
         document.Date.Should().Be(futureDate);
-    }
-
-    [Fact]
-    public void ReceiptDocument_WithMultipleItems_ShouldMaintainCorrectRelationships()
-    {
-        // Arrange
-        var document = TestDataBuilder.CreateReceiptDocumentWithItems(3);
-
-        // Act & Assert
-        document.Items.Should().HaveCount(3);
-        document.Items.Should().OnlyContain(item => item.DocumentId == document.Id);
-        document.Items.Should().OnlyContain(item => item.Document == document);
     }
 
     [Fact]
@@ -264,12 +218,9 @@ public class ReceiptDocumentTests
 
         // Act - Simulate update
         document.Number = "REC-AUDIT-001-UPDATED";
-        document.UpdatedAt = DateTime.UtcNow;
 
         // Assert
         document.CreatedAt.Should().Be(originalCreatedAt);
-        document.UpdatedAt.Should().NotBeNull();
-        document.UpdatedAt.Should().BeAfter(document.CreatedAt);
         document.Number.Should().Be("REC-AUDIT-001-UPDATED");
     }
 

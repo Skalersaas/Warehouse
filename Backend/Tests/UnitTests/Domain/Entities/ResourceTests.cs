@@ -43,7 +43,6 @@ public class ResourceTests
         resource.Name.Should().BeNull();
         resource.IsArchived.Should().BeFalse();
         resource.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        resource.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         resource.ReceiptItems.Should().BeNull();
         resource.ShipmentItems.Should().BeNull();
         resource.Balances.Should().BeNull();
@@ -64,7 +63,6 @@ public class ResourceTests
             Name = name,
             IsArchived = isArchived,
             CreatedAt = createdAt,
-            UpdatedAt = updatedAt
         };
 
         // Assert
@@ -72,7 +70,6 @@ public class ResourceTests
         resource.Name.Should().Be(name);
         resource.IsArchived.Should().Be(isArchived);
         resource.CreatedAt.Should().Be(createdAt);
-        resource.UpdatedAt.Should().Be(updatedAt);
     }
 
     [Fact]
@@ -88,21 +85,6 @@ public class ResourceTests
         // Assert
         resource.CreatedAt.Should().BeOnOrAfter(beforeCreation);
         resource.CreatedAt.Should().BeOnOrBefore(afterCreation);
-    }
-
-    [Fact]
-    public void Resource_UpdatedAt_ShouldBeSetToUtcNow_WhenUsingDefaultConstructor()
-    {
-        // Arrange
-        var beforeCreation = DateTime.UtcNow;
-
-        // Act
-        var resource = new Resource();
-        var afterCreation = DateTime.UtcNow;
-
-        // Assert
-        resource.UpdatedAt.Should().BeOnOrAfter(beforeCreation);
-        resource.UpdatedAt.Should().BeOnOrBefore(afterCreation);
     }
 
     [Fact]
@@ -154,19 +136,4 @@ public class ResourceTests
         resource.Name.Should().Be(invalidName);
     }
 
-    [Fact]
-    public void Resource_ShouldSupportUpdatedAtTracking()
-    {
-        // Arrange
-        var resource = _fixture.Create<Resource>();
-        var originalUpdatedAt = resource.UpdatedAt;
-        var newUpdatedAt = DateTime.UtcNow.AddMinutes(1);
-
-        // Act
-        resource.UpdatedAt = newUpdatedAt;
-
-        // Assert
-        resource.UpdatedAt.Should().Be(newUpdatedAt);
-        resource.UpdatedAt.Should().NotBe(originalUpdatedAt);
-    }
 }

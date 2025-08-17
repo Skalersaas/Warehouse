@@ -43,7 +43,6 @@ public class UnitTests
         unit.Name.Should().BeNull();
         unit.IsArchived.Should().BeFalse();
         unit.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        unit.UpdatedAt.Should().BeNull();
         unit.ReceiptItems.Should().BeNull();
         unit.ShipmentItems.Should().BeNull();
         unit.Balances.Should().BeNull();
@@ -64,7 +63,6 @@ public class UnitTests
             Name = name,
             IsArchived = isArchived,
             CreatedAt = createdAt,
-            UpdatedAt = updatedAt
         };
 
         // Assert
@@ -72,7 +70,6 @@ public class UnitTests
         unit.Name.Should().Be(name);
         unit.IsArchived.Should().Be(isArchived);
         unit.CreatedAt.Should().Be(createdAt);
-        unit.UpdatedAt.Should().Be(updatedAt);
     }
 
     [Fact]
@@ -137,22 +134,6 @@ public class UnitTests
         // Note: The entity doesn't enforce validation at this level
         // Validation should be handled at the business logic layer
         unit.Name.Should().Be(invalidName);
-    }
-
-    [Fact]
-    public void Unit_ShouldSupportUpdatedAtTracking()
-    {
-        // Arrange
-        var unit = _fixture.Create<Unit>();
-        var originalUpdatedAt = unit.UpdatedAt;
-        var newUpdatedAt = DateTime.UtcNow;
-
-        // Act
-        unit.UpdatedAt = newUpdatedAt;
-
-        // Assert
-        unit.UpdatedAt.Should().Be(newUpdatedAt);
-        unit.UpdatedAt.Should().NotBe(originalUpdatedAt);
     }
 
     [Theory]

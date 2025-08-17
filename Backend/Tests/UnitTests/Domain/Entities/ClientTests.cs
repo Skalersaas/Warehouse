@@ -44,7 +44,6 @@ public class ClientTests
         client.Address.Should().BeNull();
         client.IsArchived.Should().BeFalse();
         client.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-        client.UpdatedAt.Should().BeNull();
     }
 
     [Theory]
@@ -63,7 +62,6 @@ public class ClientTests
             Address = address,
             IsArchived = isArchived,
             CreatedAt = createdAt,
-            UpdatedAt = updatedAt
         };
 
         // Assert
@@ -72,7 +70,6 @@ public class ClientTests
         client.Address.Should().Be(address);
         client.IsArchived.Should().Be(isArchived);
         client.CreatedAt.Should().Be(createdAt);
-        client.UpdatedAt.Should().Be(updatedAt);
     }
 
     [Fact]
@@ -120,22 +117,6 @@ public class ClientTests
     }
 
     [Fact]
-    public void Client_ShouldSupportUpdatedAtTracking()
-    {
-        // Arrange
-        var client = _fixture.Create<Client>();
-        var originalUpdatedAt = client.UpdatedAt;
-        var newUpdatedAt = DateTime.UtcNow;
-
-        // Act
-        client.UpdatedAt = newUpdatedAt;
-
-        // Assert
-        client.UpdatedAt.Should().Be(newUpdatedAt);
-        client.UpdatedAt.Should().NotBe(originalUpdatedAt);
-    }
-
-    [Fact]
     public void Client_ArchiveWorkflow_ShouldWorkCorrectly()
     {
         // Arrange
@@ -144,15 +125,12 @@ public class ClientTests
 
         // Act - Archive
         client.IsArchived = true;
-        client.UpdatedAt = DateTime.UtcNow;
 
         // Assert
         client.IsArchived.Should().BeTrue();
-        client.UpdatedAt.Should().NotBeNull();
 
         // Act - Unarchive
         client.IsArchived = false;
-        client.UpdatedAt = DateTime.UtcNow;
 
         // Assert
         client.IsArchived.Should().BeFalse();
@@ -190,19 +168,15 @@ public class ClientTests
         // Act - Update
         client.Name = "Updated Client Name";
         client.Address = "Updated Address";
-        client.UpdatedAt = DateTime.UtcNow;
-        var updateTime = client.UpdatedAt;
 
         // Act - Archive
         client.IsArchived = true;
-        client.UpdatedAt = DateTime.UtcNow;
 
         // Assert
         client.Name.Should().Be("Updated Client Name");
         client.Address.Should().Be("Updated Address");
         client.IsArchived.Should().BeTrue();
         client.CreatedAt.Should().Be(creationTime);
-        client.UpdatedAt.Should().BeAfter(updateTime.Value);
     }
 
     [Theory]
@@ -241,14 +215,8 @@ public class ClientTests
         // Assert
         client.CreatedAt.Should().BeOnOrAfter(beforeCreation);
         client.CreatedAt.Should().BeOnOrBefore(afterCreation);
-        client.UpdatedAt.Should().BeNull(); // Should be null until explicitly set
 
         // Act - Set UpdatedAt
         var updateTime = DateTime.UtcNow;
-        client.UpdatedAt = updateTime;
-
-        // Assert
-        client.UpdatedAt.Should().Be(updateTime);
-        client.UpdatedAt.Should().BeOnOrAfter(client.CreatedAt);
     }
 }
