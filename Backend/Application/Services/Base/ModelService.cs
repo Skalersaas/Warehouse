@@ -19,7 +19,7 @@ namespace Application.Services.Base
 		protected readonly DbSet<TModel> repo = context.Set<TModel>();
 		protected readonly ILogger<ModelService<TModel, TCreate, TUpdate>> _logger = logger;
 		protected readonly ApplicationContext _context = context;
-
+		protected string UniqueFieldName { get; set; } = "number";
 		public virtual async Task<Result<TModel>> CreateAsync(TCreate entity)
 		{
 			using var transaction = await _context.Database.BeginTransactionAsync();
@@ -53,7 +53,7 @@ namespace Application.Services.Base
 				await transaction.RollbackAsync();
 				_logger.LogWarning("Unique constraint violation when creating {EntityType}: {Message}",
 					typeof(TModel).Name, GetSafeErrorMessage(ex));
-				return Result<TModel>.ErrorResult("Entity with such number already exists");
+				return Result<TModel>.ErrorResult($"Entity with such {UniqueFieldName} already exists");
 			}
 			catch (DbUpdateException ex)
 			{
@@ -255,7 +255,7 @@ namespace Application.Services.Base
 				await transaction.RollbackAsync();
 				_logger.LogWarning("Unique constraint violation when updating {EntityType} with ID {Id}",
 					typeof(TModel).Name, entity.Id);
-				return Result<TModel>.ErrorResult("Entity with such number already exists");
+				return Result<TModel>.ErrorResult($"Entity with such {UniqueFieldName} already exists");
 			}
 			catch (DbUpdateException ex)
 			{

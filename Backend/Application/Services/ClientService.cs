@@ -6,8 +6,11 @@ using Persistence.Data;
 
 namespace Application.Services;
 
-public class ClientService(ApplicationContext context, ILogger<ClientService> logger) 
-    : ArchiveService<Client, CreateClientDto, UpdateClientDto>(context, logger)
+public class ClientService
+    : ArchiveService<Client, CreateClientDto, UpdateClientDto>
 {
-
+    public ClientService(ApplicationContext _context, ILogger<ClientService> logger) : base(_context, logger)
+    {
+        UniqueFieldName = "name";
+    }
 }
