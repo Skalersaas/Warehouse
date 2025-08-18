@@ -117,7 +117,7 @@ namespace Api.Controllers.Base
             var result = await _service.DeleteAsync(id);
 
             return result.Success
-                ? ApiResponseFactory.Ok(result.Success)
+                ? ApiResponseFactory.OkMessage(result.Message)
                 : ApiResponseFactory.NotFound(result.Message);
         }
     }

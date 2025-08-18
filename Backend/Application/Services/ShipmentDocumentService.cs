@@ -190,9 +190,14 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             var doc = await _context.ShipmentDocuments.FirstOrDefaultAsync(x => x.Id == id);
 
             if (doc == null) return Result.ErrorResult("Shipment document not found");
-            return (doc.Status == ShipmentStatus.Signed)
-                ? Result.ErrorResult("Signed document cannot be deleted")
-                : Result.SuccessResult("Shipment document deleted");
+
+
+            if (doc.Status == ShipmentStatus.Signed)
+                Result.ErrorResult("Signed document cannot be deleted");
+
+            _context.ShipmentDocuments.Remove(doc);
+            await _context.SaveChangesAsync();
+            return Result.SuccessResult("Shipment document deleted");
         }
         catch (Exception ex)
         {
