@@ -1,6 +1,767 @@
-@Api_HostAddress = http://localhost:5081
+# Warehouse Management System API Test Collection
+# Complete HTTP file for testing all API endpoints
+# Make sure the API is running on http://localhost:5081 or https://localhost:7298
 
-GET {{Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@Api_HostAddress = http://localhost:5081
+@Api_HostAddress_Https = https://localhost:7298
+
+# Content-Type for JSON requests
+@ContentType = application/json
+
+# =============================================================================
+# HEALTH CHECK & DOCUMENTATION
+# =============================================================================
+
+### Get Swagger Documentation (Redirects from root)
+GET {{Api_HostAddress}}/
+Accept: text/html
+
+### Access Swagger UI directly
+GET {{Api_HostAddress}}/swagger/index.html
+Accept: text/html
+
+# =============================================================================
+# RESOURCES API
+# Resource management endpoints for warehouse items/products
+# =============================================================================
+
+### Get all resources
+GET {{Api_HostAddress}}/resource
+Accept: {{ContentType}}
+
+### Get all resources with pagination
+GET {{Api_HostAddress}}/resource?page=1&pageSize=10
+Accept: {{ContentType}}
+
+### Get all resources with search
+GET {{Api_HostAddress}}/resource?search=metal
+Accept: {{ContentType}}
+
+### Get resource by ID
+GET {{Api_HostAddress}}/resource/1
+Accept: {{ContentType}}
+
+### Create new resource
+POST {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "name": "Steel Pipes"
+}
+
+### Create another resource
+POST {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "name": "Aluminum Sheets"
+}
+
+### Update resource
+PUT {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "id": 1,
+  "name": "Updated Steel Pipes - Premium Grade"
+}
+
+### Advanced resource search with filtering
+POST {{Api_HostAddress}}/resource/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "steel",
+  "page": 1,
+  "pageSize": 10,
+  "filters": {
+    "name": "steel,aluminum",
+    "isArchived": "false"
+  }
+}
+
+### Archive resource (soft delete)
+PATCH {{Api_HostAddress}}/resource/1/archive
+Content-Type: {{ContentType}}
+
+### Unarchive resource
+PATCH {{Api_HostAddress}}/resource/1/unarchive
+Content-Type: {{ContentType}}
+
+### Delete resource (hard delete)
+DELETE {{Api_HostAddress}}/resource/2
+Accept: {{ContentType}}
+
+# =============================================================================
+# UNITS API
+# Unit of measurement management (kg, pieces, meters, etc.)
+# =============================================================================
+
+### Get all units
+GET {{Api_HostAddress}}/unit
+Accept: {{ContentType}}
+
+### Get unit by ID
+GET {{Api_HostAddress}}/unit/1
+Accept: {{ContentType}}
+
+### Create new unit
+POST {{Api_HostAddress}}/unit
+Content-Type: {{ContentType}}
+
+{
+  "name": "Kilograms",
+  "abbreviation": "kg"
+}
+
+### Create more units
+POST {{Api_HostAddress}}/unit
+Content-Type: {{ContentType}}
+
+{
+  "name": "Pieces",
+  "abbreviation": "pcs"
+}
+
+### Create unit for length
+POST {{Api_HostAddress}}/unit
+Content-Type: {{ContentType}}
+
+{
+  "name": "Meters",
+  "abbreviation": "m"
+}
+
+### Update unit
+PUT {{Api_HostAddress}}/unit
+Content-Type: {{ContentType}}
+
+{
+  "id": 1,
+  "name": "Kilograms",
+  "abbreviation": "kg"
+}
+
+### Advanced unit search
+POST {{Api_HostAddress}}/unit/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "kg",
+  "filters": {
+    "name": "kilogram,meter"
+  }
+}
+
+### Archive unit
+PATCH {{Api_HostAddress}}/unit/1/archive
+Content-Type: {{ContentType}}
+
+### Unarchive unit
+PATCH {{Api_HostAddress}}/unit/1/unarchive
+Content-Type: {{ContentType}}
+
+### Delete unit
+DELETE {{Api_HostAddress}}/unit/3
+Accept: {{ContentType}}
+
+# =============================================================================
+# CLIENTS API
+# Customer/client management for shipments
+# =============================================================================
+
+### Get all clients
+GET {{Api_HostAddress}}/client
+Accept: {{ContentType}}
+
+### Get client by ID
+GET {{Api_HostAddress}}/client/1
+Accept: {{ContentType}}
+
+### Create new client
+POST {{Api_HostAddress}}/client
+Content-Type: {{ContentType}}
+
+{
+  "name": "ABC Manufacturing Co.",
+  "email": "orders@abcmfg.com",
+  "phone": "+1-555-0123",
+  "address": "123 Industrial Park Ave, Manufacturing City, ST 12345"
+}
+
+### Create another client
+POST {{Api_HostAddress}}/client
+Content-Type: {{ContentType}}
+
+{
+  "name": "XYZ Construction Ltd.",
+  "email": "procurement@xyzconstruction.com",
+  "phone": "+1-555-0456",
+  "address": "456 Builder's Street, Construction Town, ST 67890"
+}
+
+### Update client
+PUT {{Api_HostAddress}}/client
+Content-Type: {{ContentType}}
+
+{
+  "id": 1,
+  "name": "ABC Manufacturing Co. - Updated",
+  "email": "neworders@abcmfg.com",
+  "phone": "+1-555-0123",
+  "address": "123 Industrial Park Ave, Manufacturing City, ST 12345"
+}
+
+### Advanced client search
+POST {{Api_HostAddress}}/client/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "manufacturing",
+  "filters": {
+    "name": "ABC,XYZ",
+    "isArchived": "false"
+  }
+}
+
+### Archive client
+PATCH {{Api_HostAddress}}/client/1/archive
+Content-Type: {{ContentType}}
+
+### Unarchive client
+PATCH {{Api_HostAddress}}/client/1/unarchive
+Content-Type: {{ContentType}}
+
+### Delete client
+DELETE {{Api_HostAddress}}/client/2
+Accept: {{ContentType}}
+
+# =============================================================================
+# RECEIPT DOCUMENTS API
+# Incoming goods/inventory receipts
+# =============================================================================
+
+### Get all receipt documents
+GET {{Api_HostAddress}}/receiptdocument
+Accept: {{ContentType}}
+
+### Get receipt documents with pagination
+GET {{Api_HostAddress}}/receiptdocument?page=1&pageSize=5
+Accept: {{ContentType}}
+
+### Get receipt document by ID
+GET {{Api_HostAddress}}/receiptdocument/1
+Accept: {{ContentType}}
+
+### Create new receipt document with items
+POST {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "RCP-2024-001",
+  "date": "2024-08-18T10:00:00Z",
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 100.5,
+      "unitPrice": 25.99,
+      "notes": "Premium quality steel pipes"
+    },
+    {
+      "resourceId": 2,
+      "unitId": 2,
+      "quantity": 50,
+      "unitPrice": 15.50,
+      "notes": "Standard aluminum sheets"
+    }
+  ]
+}
+
+### Create another receipt document
+POST {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "RCP-2024-002",
+  "date": "2024-08-18T14:30:00Z",
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 75.0,
+      "unitPrice": 26.50,
+      "notes": "Additional steel pipe delivery"
+    }
+  ]
+}
+
+### Update receipt document and items
+PUT {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "id": 1,
+  "number": "RCP-2024-001-UPDATED",
+  "date": "2024-08-18T10:00:00Z",
+  "items": [
+    {
+      "id": 1,
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 105.0,
+      "unitPrice": 25.99,
+      "notes": "Premium quality steel pipes - Updated quantity"
+    },
+    {
+      "id": 2,
+      "resourceId": 2,
+      "unitId": 2,
+      "quantity": 50,
+      "unitPrice": 15.50,
+      "notes": "Standard aluminum sheets"
+    }
+  ]
+}
+
+### Advanced receipt document search
+POST {{Api_HostAddress}}/receiptdocument/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "RCP-2024",
+  "page": 1,
+  "pageSize": 10,
+  "filters": {
+    "number": "RCP-2024-001,RCP-2024-002",
+    "date.from": "2024-08-01",
+    "date.to": "2024-08-31",
+    "items.quantity": "100"
+  },
+  "orderBy": "date",
+  "orderDirection": "desc"
+}
+
+### Delete receipt document
+DELETE {{Api_HostAddress}}/receiptdocument/2
+Accept: {{ContentType}}
+
+# =============================================================================
+# SHIPMENT DOCUMENTS API
+# Outbound shipments to clients
+# =============================================================================
+
+### Get all shipment documents
+GET {{Api_HostAddress}}/shipmentdocument
+Accept: {{ContentType}}
+
+### Get shipment document by ID
+GET {{Api_HostAddress}}/shipmentdocument/1
+Accept: {{ContentType}}
+
+### Create new shipment document with items
+POST {{Api_HostAddress}}/shipmentdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "SHP-2024-001",
+  "date": "2024-08-18T16:00:00Z",
+  "clientId": 1,
+  "deliveryAddress": "123 Industrial Park Ave, Manufacturing City, ST 12345",
+  "notes": "Urgent delivery - Handle with care",
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 25.0,
+      "unitPrice": 27.50,
+      "notes": "High-grade steel pipes for construction"
+    },
+    {
+      "resourceId": 2,
+      "unitId": 2,
+      "quantity": 10,
+      "unitPrice": 16.00,
+      "notes": "Aluminum sheets for roofing"
+    }
+  ]
+}
+
+### Create another shipment document
+POST {{Api_HostAddress}}/shipmentdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "SHP-2024-002",
+  "date": "2024-08-19T09:00:00Z",
+  "clientId": 1,
+  "deliveryAddress": "456 Builder's Street, Construction Town, ST 67890",
+  "notes": "Standard delivery",
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 50.0,
+      "unitPrice": 26.75,
+      "notes": "Steel pipes for infrastructure project"
+    }
+  ]
+}
+
+### Update shipment document
+PUT {{Api_HostAddress}}/shipmentdocument
+Content-Type: {{ContentType}}
+
+{
+  "id": 1,
+  "number": "SHP-2024-001-UPDATED",
+  "date": "2024-08-18T16:00:00Z",
+  "clientId": 1,
+  "deliveryAddress": "123 Industrial Park Ave, Manufacturing City, ST 12345",
+  "notes": "Urgent delivery - Handle with care - Updated notes",
+  "items": [
+    {
+      "id": 1,
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 30.0,
+      "unitPrice": 27.50,
+      "notes": "High-grade steel pipes for construction - Updated quantity"
+    }
+  ]
+}
+
+### Sign/Approve shipment document (makes it ready for processing)
+PATCH {{Api_HostAddress}}/shipmentdocument/1/sign
+Content-Type: {{ContentType}}
+
+### Revoke/Cancel shipment document
+PATCH {{Api_HostAddress}}/shipmentdocument/1/revoke
+Content-Type: {{ContentType}}
+
+### Advanced shipment document search
+POST {{Api_HostAddress}}/shipmentdocument/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "SHP-2024",
+  "filters": {
+    "number": "SHP-2024-001",
+    "client.name": "ABC Manufacturing",
+    "status": "Signed,Draft",
+    "date.from": "2024-08-01",
+    "date.to": "2024-08-31",
+    "items.resource.name": "steel"
+  },
+  "orderBy": "date",
+  "orderDirection": "desc"
+}
+
+### Delete shipment document
+DELETE {{Api_HostAddress}}/shipmentdocument/2
+Accept: {{ContentType}}
+
+# =============================================================================
+# BALANCES API
+# Current inventory balances with powerful filtering
+# =============================================================================
+
+### Get current inventory balances (basic)
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "page": 1,
+  "pageSize": 10
+}
+
+### Get balances with resource filtering
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "steel",
+  "filters": {
+    "resource.name": "Steel Pipes,Aluminum Sheets",
+    "quantity": "50"
+  },
+  "page": 1,
+  "pageSize": 20
+}
+
+### Get balances for specific resources and units
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "filters": {
+    "resourceId": "1,2",
+    "unitId": "1,2",
+    "quantity.from": "10",
+    "quantity.to": "1000"
+  },
+  "orderBy": "quantity",
+  "orderDirection": "desc"
+}
+
+### Get low stock items (quantity less than 20)
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "filters": {
+    "quantity.to": "20"
+  },
+  "orderBy": "quantity",
+  "orderDirection": "asc"
+}
+
+### Complex balance query with nested filtering
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "pipe",
+  "filters": {
+    "resource.name": "Steel,Aluminum",
+    "unit.name": "Kilograms,Pieces",
+    "quantity.from": "1",
+    "resource.isArchived": "false"
+  },
+  "page": 1,
+  "pageSize": 50,
+  "orderBy": "resource.name",
+  "orderDirection": "asc"
+}
+
+# =============================================================================
+# TESTING SCENARIOS
+# Real-world workflow examples
+# =============================================================================
+
+### Test Scenario 1: Complete Receipt Workflow
+# 1. Create resources (if not exists)
+POST {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "name": "Test Steel Beams"
+}
 
 ###
+# 2. Create unit (if not exists)
+POST {{Api_HostAddress}}/unit
+Content-Type: {{ContentType}}
+
+{
+  "name": "Tons",
+  "abbreviation": "t"
+}
+
+###
+# 3. Create receipt document
+POST {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "TEST-RCP-001",
+  "date": "2024-08-18T08:00:00Z",
+  "items": [
+    {
+      "resourceId": 3,
+      "unitId": 3,
+      "quantity": 5.5,
+      "unitPrice": 1250.00,
+      "notes": "High-quality steel beams for construction"
+    }
+  ]
+}
+
+###
+# 4. Check balance after receipt
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "filters": {
+    "resource.name": "Test Steel Beams"
+  }
+}
+
+### Test Scenario 2: Complete Shipment Workflow
+# 1. Create client (if not exists)
+POST {{Api_HostAddress}}/client
+Content-Type: {{ContentType}}
+
+{
+  "name": "Test Construction Company",
+  "email": "test@construction.com",
+  "phone": "+1-555-TEST",
+  "address": "123 Test Street, Test City, TS 12345"
+}
+
+###
+# 2. Create shipment document
+POST {{Api_HostAddress}}/shipmentdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "TEST-SHP-001",
+  "date": "2024-08-18T14:00:00Z",
+  "clientId": 3,
+  "deliveryAddress": "123 Test Street, Test City, TS 12345",
+  "notes": "Test shipment for steel beams",
+  "items": [
+    {
+      "resourceId": 3,
+      "unitId": 3,
+      "quantity": 2.0,
+      "unitPrice": 1300.00,
+      "notes": "Premium steel beams"
+    }
+  ]
+}
+
+###
+# 3. Sign the shipment document
+PATCH {{Api_HostAddress}}/shipmentdocument/3/sign
+Content-Type: {{ContentType}}
+
+###
+# 4. Check balance after shipment
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "filters": {
+    "resource.name": "Test Steel Beams"
+  }
+}
+
+# =============================================================================
+# ERROR TESTING
+# Testing error handling and validation
+# =============================================================================
+
+### Test invalid resource creation (missing name)
+POST {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "description": "This should fail - missing required name field"
+}
+
+### Test invalid ID lookup
+GET {{Api_HostAddress}}/resource/99999
+Accept: {{ContentType}}
+
+### Test invalid receipt document (missing required fields)
+POST {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "date": "2024-08-18T10:00:00Z",
+  "items": []
+}
+
+### Test invalid shipment document (invalid client ID)
+POST {{Api_HostAddress}}/shipmentdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "INVALID-SHP-001",
+  "date": "2024-08-18T16:00:00Z",
+  "clientId": 99999,
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 10.0,
+      "unitPrice": 25.00
+    }
+  ]
+}
+
+### Test operations on archived resources
+PATCH {{Api_HostAddress}}/resource/1/archive
+Content-Type: {{ContentType}}
+
+###
+# Try to use archived resource in receipt (should handle gracefully)
+POST {{Api_HostAddress}}/receiptdocument
+Content-Type: {{ContentType}}
+
+{
+  "number": "TEST-ARCHIVED-001",
+  "date": "2024-08-18T10:00:00Z",
+  "items": [
+    {
+      "resourceId": 1,
+      "unitId": 1,
+      "quantity": 10.0,
+      "unitPrice": 25.00,
+      "notes": "Testing with archived resource"
+    }
+  ]
+}
+
+# =============================================================================
+# PERFORMANCE TESTING
+# Testing with larger datasets and complex queries
+# =============================================================================
+
+### Create multiple resources for performance testing
+POST {{Api_HostAddress}}/resource
+Content-Type: {{ContentType}}
+
+{
+  "name": "Performance Test Item 001"
+}
+
+### Complex nested query for performance testing
+POST {{Api_HostAddress}}/receiptdocument/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "test",
+  "filters": {
+    "number": "TEST,RCP,SHP",
+    "date.from": "2024-01-01",
+    "date.to": "2024-12-31",
+    "items.resource.name": "steel,aluminum,test",
+    "items.quantity.from": "1",
+    "items.quantity.to": "1000",
+    "items.unitPrice.from": "10",
+    "items.unitPrice.to": "2000"
+  },
+  "page": 1,
+  "pageSize": 100,
+  "orderBy": "date",
+  "orderDirection": "desc"
+}
+
+### Test large balance query with multiple filters
+POST {{Api_HostAddress}}/balance/query
+Content-Type: {{ContentType}}
+
+{
+  "search": "",
+  "filters": {
+    "resource.name": "Steel,Aluminum,Test,Beam,Pipe,Sheet",
+    "unit.name": "Kilograms,Pieces,Tons,Meters",
+    "quantity.from": "0.1",
+    "resource.isArchived": "false"
+  },
+  "page": 1,
+  "pageSize": 1000,
+  "orderBy": "resource.name",
+  "orderDirection": "asc"
+}
+
+# =============================================================================
+# END OF API TESTS
+# =============================================================================
+
+### Health check - Verify API is responsive
+GET {{Api_HostAddress}}/swagger/v1/swagger.json
+Accept: {{ContentType}}
