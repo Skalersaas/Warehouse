@@ -73,6 +73,10 @@
       }
       &--address {
         font-size: 14px;
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
         transition: all 0.3s ease-in-out;
         @include xl_desktop {
           font-size: 13px;

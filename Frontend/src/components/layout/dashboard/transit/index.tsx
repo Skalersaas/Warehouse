@@ -16,7 +16,7 @@ const RecentDelivery = () => {
     dispatch(setLoading(true));
     const response = await api(getShipment, {
       filters: {
-        status: "1",
+        status: "Draft",
       },
     });
     setLoadPacks(response.data ?? []);
@@ -58,7 +58,7 @@ const RecentDelivery = () => {
   return (
     <div className={styles["recent__delivery"]}>
       <div className={styles["recent__delivery--number"]}>
-        ID#{currentDelivery?.number}
+        #{currentDelivery?.number}
       </div>
       <div className={styles["recent__delivery--detail"]}>
         <div className={styles["recent__delivery--detail--text"]}>

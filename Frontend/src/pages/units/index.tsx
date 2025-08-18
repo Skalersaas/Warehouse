@@ -51,11 +51,11 @@ const UnitPage = () => {
     select: false,
   });
   const [value, setValue] = useState<{
-    id: number;
+    id: string;
     name: string;
     isArchived: boolean | null;
   }>({
-    id: 0,
+    id: "",
     name: "",
     isArchived: null,
   });
@@ -89,7 +89,7 @@ const UnitPage = () => {
   const handleDelete = async () => {
     dispatch(setLoading(true));
     const res = await api(deleteUnit, selectedId);
-    if (res?.data) {
+    if (res?.success) {
       const filteredData = data.filter((unit) => unit.id !== selectedId);
       setData(filteredData);
       successAlert("Successfully deleted!");

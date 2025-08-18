@@ -46,11 +46,11 @@ const ClientPage = () => {
     select: false,
   });
   const [value, setValue] = useState<{
-    id: number;
+    id: string;
     name: string;
     isArchived: boolean | null;
   }>({
-    id: 0,
+    id: "",
     name: "",
     isArchived: null,
   });
@@ -90,7 +90,7 @@ const ClientPage = () => {
   const handleDelete = async () => {
     dispatch(setLoading(true));
     const res = await api(deleteClient, selectedId);
-    if (res?.data) {
+    if (res?.success) {
       const filteredData = data.filter((client) => client.id !== selectedId);
       setData(filteredData);
       successAlert("Successfully deleted!");

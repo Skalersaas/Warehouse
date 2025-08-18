@@ -45,11 +45,11 @@ const ResourcePage = () => {
     select: false,
   });
   const [value, setValue] = useState<{
-    id: number;
+    id: string;
     name: string;
     isArchived: boolean | null;
   }>({
-    id: 0,
+    id: "",
     name: "",
     isArchived: null,
   });
@@ -88,7 +88,7 @@ const ResourcePage = () => {
   const handleDelete = async () => {
     dispatch(setLoading(true));
     const res = await api(deleteResource, selectedId);
-    if (res?.data) {
+    if (res?.success) {
       const filteredData = data.filter(
         (resource) => resource.id !== selectedId
       );
