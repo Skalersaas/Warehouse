@@ -13,4 +13,9 @@ public class UnitService
     {
         UniqueFieldName = "name";
     }
+
+    protected override bool CanArchive(int id)
+    {
+        return !_context.ShipmentItems.Any(c => c.UnitId == id) && !_context.ReceiptItems.Any(c => c.UnitId == id);
+    }
 }

@@ -14,6 +14,9 @@ public class ArchiveService<TModel, TCreate, TUpdate>(ApplicationContext _contex
 {
     public virtual async Task<Result> ArchiveAsync(int id)
     {
+        if (!CanArchive(id))
+            return Result.ErrorResult("This entity is referenced by documents.");
+
         return await SetArchiveStatusAsync(id, true, "Entity archived successfully");
     }
 
@@ -21,6 +24,7 @@ public class ArchiveService<TModel, TCreate, TUpdate>(ApplicationContext _contex
     {
         return await SetArchiveStatusAsync(id, false, "Entity unarchived successfully");
     }
+    protected virtual bool CanArchive(int id) => throw new NotImplementedException();
 
     private async Task<Result> SetArchiveStatusAsync(int id, bool isArchived, string successMessage)
     {
@@ -37,18 +41,13 @@ public class ArchiveService<TModel, TCreate, TUpdate>(ApplicationContext _contex
                 return Result.ErrorResult($"Entity with ID {id} not found");
             }
 
-            if (entity is not IArchivable archivableEntity)
-            {
-                return Result.ErrorResult("Entity does not support archiving");
-            }
-
-            if (archivableEntity.IsArchived == isArchived)
+            if (entity.IsArchived == isArchived)
             {
                 var currentStatus = isArchived ? "archived" : "active";
                 return Result.ErrorResult($"Entity is already {currentStatus}");
             }
 
-            archivableEntity.IsArchived = isArchived;
+            entity.IsArchived = isArchived;
 
             repo.Update(entity);
             await _context.SaveChangesAsync();

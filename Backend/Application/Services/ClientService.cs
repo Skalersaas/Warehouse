@@ -13,4 +13,9 @@ public class ClientService
     {
         UniqueFieldName = "name";
     }
+
+    protected override bool CanArchive(int id)
+    {
+        return !_context.ShipmentDocuments.Any(c => c.ClientId == id);
+    }
 }

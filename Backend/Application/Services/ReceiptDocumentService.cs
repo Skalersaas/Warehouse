@@ -233,7 +233,6 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
         return entity switch
         {
             null => Result.ErrorResult("Receipt document data cannot be null"),
-            { Items: null or { Count: 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
             _ => Result.SuccessResult()
         };
     }
@@ -244,7 +243,6 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
         {
             null => Result.ErrorResult("Receipt document data cannot be null"),
             { Id: <= 0 } => Result.ErrorResult("Invalid receipt document ID"),
-            { Items: null or { Count: 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
             _ => Result.SuccessResult()
         };
     }

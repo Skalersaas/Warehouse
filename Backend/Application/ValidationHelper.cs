@@ -91,7 +91,7 @@ public static class DocumentValidationHelper
         // Check for archived resources
         var archivedResources = resources
             .Where(r => r is IArchivable archivable && archivable.IsArchived)
-            .Select(r => r.Id)
+            .Select(r => r.Name)
             .ToList();
 
         if (archivedResources.Any())
@@ -121,7 +121,7 @@ public static class DocumentValidationHelper
         // Check for archived units
         var archivedUnits = units
             .Where(u => u is IArchivable archivable && archivable.IsArchived)
-            .Select(u => u.Id)
+            .Select(u => u.Name)
             .ToList();
 
         if (archivedUnits.Any())
