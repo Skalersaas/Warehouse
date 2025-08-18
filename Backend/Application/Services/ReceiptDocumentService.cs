@@ -44,20 +44,27 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
                 return Result<ReceiptDocument>.ErrorResult("Failed to create receipt document");
             }
 
-            // Update balances for all items
-            var items = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity)).ToList();
-            var balanceResult = await _balance.BulkUpdateAsync(items);
-
-            if (!balanceResult.Success)
+            // Check if document date is today or in the past - update balance immediately
+            if (ShouldUpdateBalance(created.Entity.Date))
             {
-                _logger.LogWarning("Receipt document created but balance update failed: {Error}", balanceResult.Message);
-                return Result<ReceiptDocument>.SuccessResult(created.Entity,
-                    "Receipt document was not created: " + balanceResult.Message);
+                // Update balances for all items
+                var items = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity)).ToList();
+                var balanceResult = await _balance.BulkUpdateWithTransactionAsync(items);
+
+                if (!balanceResult.Success)
+                {
+                    _logger.LogWarning("Receipt document created but balance update failed: {Error}", balanceResult.Message);
+                    return Result<ReceiptDocument>.ErrorResult("Receipt document was not created: " + balanceResult.Message);
+                }
+
+                return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created and balances updated successfully");
             }
-
-            return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created and balances updated successfully");
+            else
+            {
+                _logger.LogInformation("Receipt document created with future date {Date}. Balance will be updated by daily worker.", created.Entity.Date);
+                return Result<ReceiptDocument>.SuccessResult(created.Entity, "Receipt document created (balance will be updated on document date)");
+            }
         }
-
         catch (DbUpdateException)
         {
             return Result<ReceiptDocument>.ErrorResult("Document number cannot be repetitive");
@@ -86,6 +93,11 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
                 return Result<ReceiptDocument>.ErrorResult($"Receipt document with ID {entity.Id} not found");
             }
 
+            // Store original state for balance calculations
+            var originalDate = existing.Date;
+            var originalItems = existing.Items.ToList();
+            var shouldUpdateOriginal = ShouldUpdateBalance(originalDate);
+
             // Validate items using helper
             var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
                 _context,
@@ -97,24 +109,69 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             if (!itemsValidation.Success)
                 return Result<ReceiptDocument>.ErrorResult(itemsValidation.Message);
 
-            // Calculate balance changes
-            var netChanges = CalculateBalanceChanges(existing.Items, entity.Items);
+            // Apply the update to get the new date
+            Mapper.AutoMapToExisting(entity, existing);
+            var newDate = existing.Date;
+            var shouldUpdateNew = ShouldUpdateBalance(newDate);
 
-
-            // Apply balance changes if any
-            if (netChanges.Count != 0)
+            if (shouldUpdateOriginal && shouldUpdateNew)
             {
-                var balanceResult = await _balance.BulkUpdateAsync(netChanges);
-                if (!balanceResult.Success)
+                // Both dates should affect balance - calculate net changes
+                var netChanges = CalculateBalanceChanges(originalItems, entity.Items);
+
+                if (netChanges.Count != 0)
                 {
-                    _logger.LogWarning("Balance update failed: {Error}", balanceResult.Message);
-                    return Result<ReceiptDocument>.ErrorResult("Balance update had issues: " + balanceResult.Message);
+                    var balanceResult = await _balance.BulkUpdateWithTransactionAsync(netChanges);
+                    if (!balanceResult.Success)
+                    {
+                        _logger.LogWarning("Balance update failed: {Error}", balanceResult.Message);
+                        return Result<ReceiptDocument>.ErrorResult("Balance update had issues: " + balanceResult.Message);
+                    }
                 }
             }
+            else if (shouldUpdateOriginal && !shouldUpdateNew)
+            {
+                // Original affected balance, new is future - reverse original balances
+                var reverseChanges = originalItems.Select(x => (x.ResourceId, x.UnitId, -x.Quantity)).ToList();
 
-            Mapper.AutoMapToExisting(entity, existing);
+                if (reverseChanges.Count != 0)
+                {
+                    var balanceResult = await _balance.BulkUpdateWithTransactionAsync(reverseChanges);
+                    if (!balanceResult.Success)
+                    {
+                        _logger.LogWarning("Balance reversal failed: {Error}", balanceResult.Message);
+                        return Result<ReceiptDocument>.ErrorResult("Balance reversal had issues: " + balanceResult.Message);
+                    }
+                }
+            }
+            else if (!shouldUpdateOriginal && shouldUpdateNew)
+            {
+                // Original was future, new should affect balance now - apply new balances
+                var newItems = entity.Items.Select(b => (b.ResourceId, b.UnitId, b.Quantity)).ToList();
+
+                if (newItems.Count != 0)
+                {
+                    var balanceResult = await _balance.BulkUpdateWithTransactionAsync(newItems);
+                    if (!balanceResult.Success)
+                    {
+                        _logger.LogWarning("Balance application failed: {Error}", balanceResult.Message);
+                        return Result<ReceiptDocument>.ErrorResult("Balance application had issues: " + balanceResult.Message);
+                    }
+                }
+            }
+            // If both dates are future (!shouldUpdateOriginal && !shouldUpdateNew), no balance updates needed
+
             await _context.SaveChangesAsync();
-            return Result<ReceiptDocument>.SuccessResult(existing, "Receipt document updated successfully");
+
+            var message = (shouldUpdateOriginal, shouldUpdateNew) switch
+            {
+                (true, true) => "Receipt document updated and balances adjusted successfully",
+                (true, false) => "Receipt document updated to future date - balances reversed",
+                (false, true) => "Receipt document updated and balances applied successfully",
+                (false, false) => "Receipt document updated (future date - no balance changes)"
+            };
+
+            return Result<ReceiptDocument>.SuccessResult(existing, message);
         }
         catch (Exception ex)
         {
@@ -122,6 +179,7 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
             return Result<ReceiptDocument>.ErrorResult("An error occurred while updating the receipt document");
         }
     }
+
     public override async Task<Result> DeleteAsync(int id)
     {
         try
@@ -139,16 +197,28 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
                 return Result.ErrorResult($"Receipt document with ID {id} not found");
             }
 
-            // Check if we have sufficient stock to reverse the operations
-            var netChanges = existing.Items.Select(x => (x.ResourceId, x.UnitId, -x.Quantity)).ToList();
-            var stockValidation = await _balance.BulkUpdateAsync(netChanges);
-            if (!stockValidation.Success)
-                return stockValidation;
+            // Only reverse balances if the document should affect current balance
+            if (ShouldUpdateBalance(existing.Date))
+            {
+                // Check if we have sufficient stock to reverse the operations
+                var netChanges = existing.Items.Select(x => (x.ResourceId, x.UnitId, -x.Quantity)).ToList();
+                var stockValidation = await _balance.BulkUpdateWithTransactionAsync(netChanges);
+                if (!stockValidation.Success)
+                    return stockValidation;
+            }
+            else
+            {
+                _logger.LogInformation("Deleting receipt document with future date {Date}. No balance changes needed.", existing.Date);
+            }
 
             _context.ReceiptDocuments.Remove(existing);
             await _context.SaveChangesAsync();
 
-            return Result.SuccessResult("Receipt document deleted and balances updated successfully");
+            var message = ShouldUpdateBalance(existing.Date)
+                ? "Receipt document deleted and balances updated successfully"
+                : "Receipt document deleted (future date - no balance changes)";
+
+            return Result.SuccessResult(message);
         }
         catch (Exception ex)
         {
@@ -174,9 +244,17 @@ public class ReceiptDocumentService(ApplicationContext docs, BalanceService bala
         {
             null => Result.ErrorResult("Receipt document data cannot be null"),
             { Id: <= 0 } => Result.ErrorResult("Invalid receipt document ID"),
-            { Items: null or { Count : 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
+            { Items: null or { Count: 0 } } => Result.ErrorResult("Receipt document must contain at least one item"),
             _ => Result.SuccessResult()
         };
+    }
+
+    /// <summary>
+    /// Determines if balance should be updated (document date is today or in the past)
+    /// </summary>
+    private static bool ShouldUpdateBalance(DateTime documentDate)
+    {
+        return documentDate <= DateTime.Today;
     }
 
     private static List<(int ResourceId, int UnitId, decimal Quantity)> CalculateBalanceChanges(

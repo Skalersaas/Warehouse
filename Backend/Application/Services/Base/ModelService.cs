@@ -206,10 +206,10 @@ namespace Application.Services.Base
 				var total = await baseQuery.CountAsync();
 				var dataQuery = includeConfig?.Invoke(baseQuery) ?? baseQuery;
 
-				if (!string.IsNullOrEmpty(model.SortedField))
-				{
-					dataQuery = QueryMaster<TModel>.ApplyOrdering(dataQuery, model.SortedField, model.IsDescending);
-				}
+                if (string.IsNullOrEmpty(model.SortedField))
+                    model.SortedField = "Id";
+
+				dataQuery = QueryMaster<TModel>.ApplyOrdering(dataQuery, model.SortedField, model.IsDescending);
 
 				if (model.PaginationValid())
 				{

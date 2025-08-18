@@ -25,6 +25,7 @@ public class ApplicationContext : DbContext
     public DbSet<ShipmentDocument> ShipmentDocuments { get; set; }
     public DbSet<ShipmentItem> ShipmentItems { get; set; }
     public DbSet<Balance> Balances { get; set; }
+    public DbSet<WorkerExecution> WorkerExecutions { get; set; }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
 #if DEBUG
@@ -138,6 +139,11 @@ public class ApplicationContext : DbContext
                 .WithMany(u => u.ShipmentItems)
                 .HasForeignKey(si => si.UnitId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WorkerExecution>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
         });
     }
 }

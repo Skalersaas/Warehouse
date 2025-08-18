@@ -1,12 +1,15 @@
 ﻿using Api.Middleware;
+using Application;
 using Application.Interfaces;
+using Application.Models.Balance;
 using Application.Models.ReceiptDocument;
 using Application.Models.ReceiptItem;
 using Application.Models.ShipmentDocument;
 using Application.Models.ShipmentItem;
 using Application.Services;
 using Application.Services.Base;
-using Application;
+using BackgroundServices;
+using BackgroundServices.Services;
 using Domain.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
@@ -14,7 +17,6 @@ using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
 using Utilities;
 using Utilities.DataManipulation;
-using Application.Models.Balance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,8 +44,12 @@ static void ConfigureBuilder(WebApplicationBuilder builder)
     // Repos
     AddScoped(builder.Services);
 
+    // Worker
+    ConfigureBackgroundWorker(builder.Services);
+
     // Mapper
     RegisterMappings();
+
     builder.Services.AddAuthorization();
 }
 static void ConfigureApp(WebApplication app)
@@ -78,6 +84,16 @@ static void ConfigureApp(WebApplication app)
     app.MapControllers();
 }
 #region Configures
+static void ConfigureBackgroundWorker(IServiceCollection services)
+{
+    // Register worker execution tracking
+    services.AddScoped<WorkerExecutionService>();
+    
+    // Register balance workers
+    services.AddSingleton<DailyBalanceWorker>();
+    services.AddHostedService<StartupBalanceWorker>();  // Runs on startup
+    services.AddHostedService<DailyBalanceWorker>();    // Runs daily at 00:00
+}
 static void ConfigureDatabase(IServiceCollection services)
 {
     string? cs = Environment.GetEnvironmentVariable("ConnectionString");

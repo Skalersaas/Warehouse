@@ -88,9 +88,12 @@ public class BalanceService(ApplicationContext context, ILogger<BalanceService> 
             return Result<(Balance, bool)>.ErrorResult("Failed to validate stock availability");
         }
     }
+
+    /// <summary>
+    /// Bulk update balances without internal transaction - relies on calling code to manage transactions
+    /// </summary>
     public async Task<Result> BulkUpdateAsync(List<(int ResourceId, int UnitId, decimal Quantity)> items)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             if (items.Count == 0)
@@ -108,32 +111,57 @@ public class BalanceService(ApplicationContext context, ILogger<BalanceService> 
                 var validation = await ValidateStockAsync(resourceId, unitId, -quantity);
 
                 if ((validation.Success && !validation.Data.isAvailable) || !validation.Success)
-
                     validationErrors.Add($"Resource: {validation.Data.balance.Resource.Name}, Unit: {validation.Data.balance.Unit.Name}: {validation.Message}");
             }
 
             if (validationErrors.Count != 0)
             {
-                await transaction.RollbackAsync();
                 return Result.ErrorResult("Stock validation failed", validationErrors);
             }
-
 
             foreach (var (resourceId, unitId, quantity) in items)
             {
                 await UpdateBalanceAsync(resourceId, unitId, quantity);
             }
 
-            await transaction.CommitAsync();
             return Result.SuccessResult($"Successfully processed {items.Count} items");
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error processing document");
             return Result.ErrorResult("Failed to process document");
         }
     }
+
+    /// <summary>
+    /// Version with internal transaction for standalone use
+    /// </summary>
+    public async Task<Result> BulkUpdateWithTransactionAsync(List<(int ResourceId, int UnitId, decimal Quantity)> items)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var result = await BulkUpdateAsync(items);
+            
+            if (result.Success)
+            {
+                await transaction.CommitAsync();
+            }
+            else
+            {
+                await transaction.RollbackAsync();
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error processing document with transaction");
+            return Result.ErrorResult("Failed to process document");
+        }
+    }
+
     private async Task<Result> UpdateBalanceAsync(int resourceId, int unitId, decimal quantity)
     {
         var existingBalance = await repo

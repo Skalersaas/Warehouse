@@ -14,6 +14,8 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     : ModelService<ShipmentDocument, CreateShipmentDocumentDto, UpdateShipmentDocumentDto>(repo, logger)
 {
     private readonly BalanceService _balance = balance;
+    private readonly ApplicationContext _repo = repo;
+
     public override async Task<Result<ShipmentDocument>> CreateAsync(CreateShipmentDocumentDto entity)
     {
         try
@@ -46,10 +48,10 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
 
             if (created.Entity == null)
                 return Result<ShipmentDocument>.ErrorResult("Failed to create shipment document");
-            
+
             return created.Entity == null
-                ?  Result<ShipmentDocument>.ErrorResult("Failed to create shipment document")
-                :  Result<ShipmentDocument>.SuccessResult(created.Entity, "Shipment document created successfully");
+                ? Result<ShipmentDocument>.ErrorResult("Failed to create shipment document")
+                : Result<ShipmentDocument>.SuccessResult(created.Entity, "Shipment document created successfully");
         }
         catch (DbUpdateException)
         {
@@ -61,6 +63,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             return Result<ShipmentDocument>.ErrorResult("An error occurred while creating the shipment document");
         }
     }
+
     public override async Task<Result<ShipmentDocument>> UpdateAsync(UpdateShipmentDocumentDto entity)
     {
         try
@@ -82,7 +85,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             else if (existing.Status == ShipmentStatus.Signed)
                 return Result<ShipmentDocument>.ErrorResult($"Signed shipment document cannot be changed");
 
-                // Validate items using helper
+            // Validate items using helper
             var itemsValidation = await DocumentValidationHelper.ValidateItemsAsync(
                 _context,
                 entity.Items,
@@ -110,9 +113,8 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
         }
     }
 
-
     /// <summary>
-    /// Signs a shipment document, checking stock availability and updating balances.
+    /// Signs a shipment document, checking stock availability and updating balances if date allows.
     /// </summary>
     public virtual async Task<Result<ShipmentDocument>> Sign(int id)
     {
@@ -122,16 +124,62 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             var doc = await ValidateAndGetDocumentForSigning(id);
             if (!doc.Success) return Result<ShipmentDocument>.ErrorResult(doc.Message, doc.Errors);
 
+            // Validate stock availability considering future commitments
+            var stockValidation = await ValidateStockAvailabilityWithFutureCommitments(doc.Data);
+            if (!stockValidation.Success)
+                return Result<ShipmentDocument>.ErrorResult(stockValidation.Message);
 
-            var balanceUpdate = await ProcessShipmentBalanceChanges(doc.Data.Items);
-            if (!balanceUpdate.Success) return Result<ShipmentDocument>.ErrorResult(balanceUpdate.Message, balanceUpdate.Errors);
+            // Check if document date allows balance update
+            if (ShouldUpdateBalance(doc.Data.Date))
+            {
+                var balanceUpdate = await ProcessShipmentBalanceChanges(doc.Data.Items);
+                if (!balanceUpdate.Success)
+                    return Result<ShipmentDocument>.ErrorResult(balanceUpdate.Message, balanceUpdate.Errors);
 
-            return await SignDocumentAndUpdate(doc.Data);
+                return await SignDocumentAndUpdate(doc.Data);
+            }
+            else
+            {
+                // Sign document but don't update balance
+                return await SignDocumentAndUpdate(doc.Data);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error signing shipment document with ID {Id}", id);
             return Result<ShipmentDocument>.ErrorResult("An error occurred while signing the document");
+        }
+    }
+
+    /// <summary>
+    /// Revokes a signed shipment document, restoring the balances if date allows.
+    /// </summary>
+    public virtual async Task<Result<ShipmentDocument>> Revoke(int id)
+    {
+        try
+        {
+            var doc = await ValidateAndGetDocumentForRevocation(id);
+            if (!doc.Success) return Result<ShipmentDocument>.ErrorResult(doc.Message);
+
+            // Check if document date allows balance update
+            if (ShouldUpdateBalance(doc.Data.Date))
+            {
+                var balanceRestore = await RestoreBalances(doc.Data.Items);
+                if (!balanceRestore.Success)
+                    return Result<ShipmentDocument>.ErrorResult(balanceRestore.Message);
+
+                return await RevokeDocumentAndUpdate(doc.Data);
+            }
+            else
+            {
+                // Revoke document but don't update balance
+                return await RevokeDocumentAndUpdate(doc.Data);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error revoking shipment document with ID {Id}", id);
+            return Result<ShipmentDocument>.ErrorResult("An error occurred while revoking the document");
         }
     }
 
@@ -152,27 +200,6 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             return Result.ErrorResult("An error occurred while deleting the document");
         }
     }
-    /// <summary>
-    /// Revokes a signed shipment document, restoring the balances.
-    /// </summary>
-    public virtual async Task<Result<ShipmentDocument>> Revoke(int id)
-    {
-        try
-        {
-            var doc = await ValidateAndGetDocumentForRevocation(id);
-            if (!doc.Success) return Result<ShipmentDocument>.ErrorResult(doc.Message);
-
-            var balanceRestore = await RestoreBalances(doc.Data.Items);
-            if (!balanceRestore.Success) return Result<ShipmentDocument>.ErrorResult(balanceRestore.Message);
-
-            return await RevokeDocumentAndUpdate(doc.Data);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error revoking shipment document with ID {Id}", id);
-            return Result<ShipmentDocument>.ErrorResult("An error occurred while revoking the document");
-        }
-    }
 
     #region Private Methods
     private static Result ValidateCreateRequest(CreateShipmentDocumentDto entity)
@@ -184,6 +211,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             _ => Result.SuccessResult()
         };
     }
+
     private static Result ValidateUpdateRequest(UpdateShipmentDocumentDto entity)
     {
         return entity switch
@@ -192,6 +220,113 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             { Items: null or { Count: 0 } } => Result.ErrorResult("Shipment document must contain at least one item"),
             _ => Result.SuccessResult()
         };
+    }
+
+    /// <summary>
+    /// Validates that there's enough stock considering current balances and future signed commitments
+    /// </summary>
+    private async Task<Result> ValidateStockAvailabilityWithFutureCommitments(ShipmentDocument document)
+    {
+        try
+        {
+            // Group items by resource and unit for validation
+            var itemGroups = document.Items
+                .GroupBy(i => new { i.ResourceId, i.UnitId })
+                .ToList();
+
+            foreach (var group in itemGroups)
+            {
+                var resourceId = group.Key.ResourceId;
+                var unitId = group.Key.UnitId;
+                var requiredQuantity = group.Sum(i => i.Quantity);
+
+                // Get current balance - using a simple query since GetBalanceAsync might not exist
+                var balanceEntity = await _context.Balances
+                    .FirstOrDefaultAsync(b => b.ResourceId == resourceId && b.UnitId == unitId);
+
+                var currentBalance = balanceEntity?.Quantity ?? 0;
+
+                // Get future signed commitments (excluding current document)
+                var futureCommitments = await GetFutureSignedCommitments(resourceId, unitId, document.Id, document.Date);
+                var totalFutureRequirements = futureCommitments.Sum(x => x.Quantity);
+
+                // Calculate what will be available after this operation
+                decimal availableAfterOperation;
+
+                if (ShouldUpdateBalance(document.Date))
+                {
+                    // Current operation will be processed immediately
+                    availableAfterOperation = currentBalance - requiredQuantity;
+                }
+                else
+                {
+                    // Current operation is future, so current balance remains for now
+                    availableAfterOperation = currentBalance;
+                    // But add this operation to future requirements
+                    totalFutureRequirements += requiredQuantity;
+                }
+
+                // Check if we'll have enough stock for future commitments
+                if (availableAfterOperation < totalFutureRequirements)
+                {
+                    var resourceInfo = await _context.Resources.FirstOrDefaultAsync(r => r.Id == resourceId);
+                    var unitInfo = await _context.Units.FirstOrDefaultAsync(u => u.Id == unitId);
+
+                    return Result.ErrorResult(
+                        $"Insufficient stock for {resourceInfo?.Name ?? resourceId.ToString()} " +
+                        $"({unitInfo?.Name ?? unitId.ToString()}). " +
+                        $"Current balance: {currentBalance}, Required now: {requiredQuantity}, " +
+                        $"Future commitments: {totalFutureRequirements - (ShouldUpdateBalance(document.Date) ? 0 : requiredQuantity)}, " +
+                        $"Available after operation: {availableAfterOperation}, " +
+                        $"Shortage: {-availableAfterOperation}");
+                }
+            }
+
+            return Result.SuccessResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating stock availability for document {DocumentId}", document.Id);
+            return Result.ErrorResult("Error occurred while validating stock availability");
+        }
+    }
+
+    /// <summary>
+    /// Gets future signed shipment commitments for a specific resource and unit
+    /// </summary>
+    private async Task<List<(DateTime Date, decimal Quantity)>> GetFutureSignedCommitments(
+        int resourceId, int unitId, int excludeDocumentId, DateTime fromDate)
+    {
+        try
+        {
+            var futureCommitments = await _context.ShipmentDocuments
+                .Where(s => s.Id != excludeDocumentId &&
+                           s.Status == ShipmentStatus.Signed &&
+                           s.Date.Date >= fromDate.Date)
+                .Select(s => new
+                {
+                    DocumentDate = s.Date,
+                    Items = s.Items.Where(i => i.ResourceId == resourceId && i.UnitId == unitId)
+                                  .Select(i => i.Quantity)
+                })
+                .ToListAsync();
+
+            return [.. futureCommitments.SelectMany(doc => doc.Items.Select(quantity => (doc.DocumentDate, quantity)))];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting future commitments for resource {ResourceId}, unit {UnitId}",
+                resourceId, unitId);
+            return new List<(DateTime, decimal)>();
+        }
+    }
+
+    /// <summary>
+    /// Determines if balance should be updated (document date is today or in the past)
+    /// </summary>
+    private static bool ShouldUpdateBalance(DateTime documentDate)
+    {
+        return documentDate.Date <= DateTime.Today;
     }
 
     private async Task<Result<ShipmentDocument>> ValidateAndGetDocumentForSigning(int id)
@@ -225,10 +360,11 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
             _ => Result<ShipmentDocument>.SuccessResult(doc)
         };
     }
+
     private async Task<Result> ProcessShipmentBalanceChanges(ICollection<ShipmentItem> items)
     {
         var changes = items.Select(i => (i.ResourceId, i.UnitId, -i.Quantity)).ToList();
-        var result = await _balance.BulkUpdateAsync(changes);
+        var result = await _balance.BulkUpdateWithTransactionAsync(changes);
 
         return result.Success
             ? Result.SuccessResult()
@@ -238,7 +374,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     private async Task<Result> RestoreBalances(ICollection<ShipmentItem> items)
     {
         var restorations = items.Select(i => (i.ResourceId, i.UnitId, i.Quantity)).ToList();
-        var result = await _balance.BulkUpdateAsync(restorations);
+        var result = await _balance.BulkUpdateWithTransactionAsync(restorations);
 
         return result.Success
             ? Result.SuccessResult()
@@ -258,7 +394,7 @@ public class ShipmentDocumentService(ApplicationContext repo, BalanceService bal
     private async Task<Result<ShipmentDocument>> UpdateDocumentStatus(ShipmentDocument doc, ShipmentStatus status, string successMessage)
     {
         doc.Status = status;
-        var found = await repo.FirstOrDefaultAsync(x => x.Id == doc.Id);
+        var found = await _context.ShipmentDocuments.FirstOrDefaultAsync(x => x.Id == doc.Id);
 
         if (found == null)
         {
