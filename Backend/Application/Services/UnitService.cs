@@ -6,7 +6,11 @@ using Persistence.Data;
 
 namespace Application.Services;
 
-public class UnitService(ApplicationContext repo, ILogger<UnitService> logger) 
-    : ArchiveService<Unit, CreateUnitDto, UpdateUnitDto>(repo, logger)
+public class UnitService
+    : ArchiveService<Unit, CreateUnitDto, UpdateUnitDto>
 {
+        public UnitService(ApplicationContext _context, ILogger<UnitService> logger) : base(_context, logger)
+    {
+        UniqueFieldName = "name";
+    }
 }
