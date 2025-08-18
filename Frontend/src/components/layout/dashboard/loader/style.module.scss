@@ -1,0 +1,66 @@
+@use "@/styles/main.module.scss" as *;
+
+.shipment__loader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  @include md_desktop {
+    position: absolute;
+    width: calc(100vw - 344px);
+  }
+  @include desktop {
+    width: calc(100vw - 146px);
+  }
+  @include lg_mobile {
+    width: calc(100vw - 84px);
+  }
+  @include mobile {
+    justify-content: space-between;
+    width: calc(100vw - 60px);
+  }
+  &--bar {
+    background-color: $main_gray;
+    width: 60%;
+    height: 6px;
+    border-radius: 20px;
+    @include tablet {
+      width: 45%;
+    }
+    @include mobile {
+      width: 65%;
+    }
+    @include sm_mobile {
+      width: 50%;
+    }
+    &--active {
+      background-image: linear-gradient(to right, $first_blue, $main_blue);
+      height: 6px;
+      border-radius: 20px;
+    }
+  }
+  &--details {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: $second_sub_text_gray;
+    font-size: 14px;
+    &--load {
+      font-weight: 600;
+      color: $main_black;
+    }
+  }
+  &--button {
+    background-color: $main_blue;
+    color: $main_white;
+    padding: 10px 28px;
+    border-radius: 40px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    margin-left: auto;
+    @include mobile {
+      display: none;
+    }
+  }
+}

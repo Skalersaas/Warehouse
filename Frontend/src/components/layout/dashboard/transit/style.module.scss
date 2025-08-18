@@ -1,0 +1,81 @@
+@use "@/styles/main.module.scss" as *;
+
+.recent__delivery {
+  background-image: linear-gradient(
+    to right bottom,
+    $section_bg_gradient_first,
+    $section_bg_gradient_second
+  );
+  padding: 20px;
+  border-radius: 20px;
+  width: 55%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  @include md_desktop {
+    width: calc(100% - 40px);
+  }
+  &--number {
+    font-weight: 600;
+    font-size: 18px;
+  }
+  &--detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    &--text {
+      color: $second_sub_text_gray;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      &--sub {
+        font-weight: 600;
+        color: $main_black;
+      }
+    }
+  }
+  &--image {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  &--time--loader {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    &--active--pieces {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background-image: linear-gradient(
+        to right bottom,
+        $first_blue,
+        $main_blue
+      );
+      -webkit-mask-image: repeating-linear-gradient(
+        to right,
+        black 0px,
+        black 4px,
+        transparent 4px,
+        transparent 7px
+      );
+      -webkit-mask-repeat: repeat;
+      -webkit-mask-size: 7px 100%;
+      .piece {
+        width: 4px;
+        height: 30px;
+      }
+    }
+    &--inactive--pieces {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      .piece {
+        background-color: $main_gray;
+        width: 4px;
+        height: 30px;
+      }
+    }
+  }
+}

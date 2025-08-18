@@ -1,15 +1,14 @@
-import Sidebar from "./components/common/sidebar"
+import { RouterProvider } from "react-router-dom";
+import router from "./routes/root";
+import { Toaster } from "react-hot-toast";
 
 function App() {
-
   return (
-  <div>
-    <Sidebar/>
-    <div>
-      <h1>Home page</h1>
-    </div>
-  </div>
-  )
+    <>
+      <Toaster position={"bottom-right"} reverseOrder={false} />
+      <RouterProvider router={router} />
+    </>
+  );
 }
 
-export default App
+export default App;

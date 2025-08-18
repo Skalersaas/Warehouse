@@ -1,0 +1,101 @@
+@use "@/styles/main.module.scss" as *;
+
+.client__container {
+  width: 45%;
+  background-image: linear-gradient(
+    to right bottom,
+    $section_bg_gradient_first,
+    $section_bg_gradient_second
+  );
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  transition: all 0.3s ease-in-out;
+  @include md_desktop {
+    display: flex;
+    width: calc(100% - 40px);
+  }
+  &--title {
+    font-weight: 600;
+    font-size: 18px;
+  }
+  .client__section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    height: 195.5px;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    @include md_desktop {
+      height: 120px;
+    }
+    &--card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      &--image {
+        background-color: $main_gray;
+        width: 68px;
+        height: 68px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease-in-out;
+        @include xl_desktop {
+          width: 48px;
+          height: 48px;
+        }
+      }
+      &--details {
+        display: flex;
+        flex-direction: column;
+        color: $first_sub_text_gray;
+        gap: 8px;
+      }
+      &--name {
+        font-weight: 600;
+        color: $main_black;
+        max-width: 120px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        transition: all 0.3s ease-in-out;
+        @include xl_desktop {
+          font-size: 14px;
+        }
+      }
+      &--address {
+        font-size: 14px;
+        transition: all 0.3s ease-in-out;
+        @include xl_desktop {
+          font-size: 13px;
+        }
+      }
+      &--button {
+        background-color: $second_blue;
+        border: 1px solid $main_blue;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: $main_blue;
+        cursor: pointer;
+        margin-left: auto;
+        transition: all 0.3s ease-in-out;
+        &:hover {
+          background-color: $main_blue;
+          color: $main_white;
+        }
+      }
+    }
+  }
+}

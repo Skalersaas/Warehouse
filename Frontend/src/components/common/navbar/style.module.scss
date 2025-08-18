@@ -1,0 +1,113 @@
+@use "@/styles/main.module.scss" as *;
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 40px 40px 0;
+  gap: 12px;
+  @include tablet {
+    padding-bottom: 30px;
+  }
+  @include lg_mobile {
+    padding-left: 100px;
+    padding-bottom: 20px;
+  }
+  @include mobile {
+    padding-right: 20px;
+  }
+  &__search {
+    display: flex;
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    transition: all 0.3s ease-in-out;
+    @include tablet {
+      max-width: 60%;
+    }
+    &--icon {
+      position: absolute;
+      top: 7px;
+      left: 10px;
+    }
+    &--input {
+      border-radius: 20px;
+      padding: 12px 13px 12px 34px;
+      border: none;
+      outline: none;
+      width: 100%;
+    }
+  }
+  &__auth {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    &--settings {
+      background-color: $main_white;
+      border-radius: 50%;
+      width: 39px;
+      height: 39px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      @include lg_tablet {
+        display: none;
+      }
+    }
+    &--bell {
+      background-color: $main_white;
+      border-radius: 50%;
+      width: 39px;
+      height: 39px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      @include lg_tablet {
+        display: none;
+      }
+    }
+
+    &--user--profile {
+      background-color: $main_white;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      padding: 5px 8px 5px 5px;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 1s ease-in-out;
+      @include lg_mobile {
+        gap: 0;
+      }
+      &--logo {
+        background-color: $main_gray;
+        width: 29px;
+        height: 29px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      &--name {
+        font-size: 12px;
+        color: $first_sub_text_gray;
+        transition: all 1s ease-in-out;
+        opacity: 1;
+        width: 80px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        @include lg_mobile {
+          opacity: 0;
+          width: 0;
+          overflow: hidden;
+        }
+      }
+      &--icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 9px;
+      }
+    }
+  }
+}
