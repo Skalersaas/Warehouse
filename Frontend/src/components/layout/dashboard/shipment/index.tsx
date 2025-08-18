@@ -39,7 +39,7 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
     const response = await api(getShipment, {
       filters: {
         status: activeStatus,
-      }
+      },
     });
     setLoadPacks(response.data ?? []);
     dispatch(setLoading(false));
@@ -120,7 +120,15 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                         >
                           <Package />
                         </div>
-                        {rs.resourceName}
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.resourceName}
+                        </div>
                       </div>
                       <div
                         className={
@@ -129,8 +137,24 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                           ]
                         }
                       >
-                        <div>{rs.quantity}</div>
-                        <div>{rs.unitName}</div>
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.quantity}
+                        </div>
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.unitName}
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -276,56 +276,61 @@ const ShipmentPage = () => {
 
       <div className={styles["shipments-container-search"]}>
         <div className={styles["shipments-container-search-wrapper"]}>
-          <div className={styles["shipments-container-date-time"]}>
-            <div className={styles["shipments-container-calendar-wrapper"]}>
-              <label
-                className={styles["shipments-container-calendar-wrapper-label"]}
-              >
-                Choose Period
-              </label>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "start" ? null : "start")
-                }
-                className={styles["shipments-container-calendar-button"]}
-              >
-                {formattedDate.startDate}
-              </button>
+          <div className={styles["shipments-container-search-wrapper-date"]}>
+            <label
+              className={styles["shipments-container-calendar-wrapper-label"]}
+            >
+              Choose Period
+            </label>
 
-              {activeCalendar === "start" && (
-                <div className={styles["shipments-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.startDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, startDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
-            </div>
+            <div className={styles["shipments-container-date-time"]}>
+              <div className={styles["shipments-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(
+                      activeCalendar === "start" ? null : "start"
+                    )
+                  }
+                  className={styles["shipments-container-calendar-button"]}
+                >
+                  {formattedDate.startDate}
+                </button>
 
-            <div className={styles["shipments-container-calendar-wrapper"]}>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "end" ? null : "end")
-                }
-                className={styles["shipments-container-calendar-button"]}
-              >
-                {formattedDate.endDate}
-              </button>
+                {activeCalendar === "start" && (
+                  <div className={styles["shipments-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.startDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, startDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
 
-              {activeCalendar === "end" && (
-                <div className={styles["shipments-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.endDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, endDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
+              <div className={styles["shipments-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(activeCalendar === "end" ? null : "end")
+                  }
+                  className={styles["shipments-container-calendar-button"]}
+                >
+                  {formattedDate.endDate}
+                </button>
+
+                {activeCalendar === "end" && (
+                  <div className={styles["shipments-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.endDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, endDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className={styles["shipments-container-search-select-box"]}>
@@ -368,7 +373,6 @@ const ShipmentPage = () => {
               setModal={(isOpen) => handleModal("numberModal", isOpen)}
               isOpen={modal.numberModal}
             />
-
             <Select
               label="Client"
               data={otherData?.clientData}
@@ -407,8 +411,8 @@ const ShipmentPage = () => {
               }
               setModal={(isOpen) => handleModal("clientModal", isOpen)}
               isOpen={modal.clientModal}
+              inSearch={true}
             />
-
             <Select
               label="Resource"
               data={otherData?.resourceData}
@@ -448,7 +452,6 @@ const ShipmentPage = () => {
               setModal={(isOpen) => handleModal("resourceModal", isOpen)}
               isOpen={modal.resourceModal}
             />
-
             <Select
               label="Unit"
               data={otherData?.unitData}

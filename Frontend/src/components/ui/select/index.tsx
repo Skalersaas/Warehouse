@@ -12,11 +12,21 @@ interface IProps {
   }) => void;
   setModal: (isOpen: boolean) => void;
   isOpen: boolean;
+  inSearch?: boolean;
 }
 
-const Select = ({ label, data, value, setValue, setModal, isOpen }: IProps) => {
+const Select = ({
+  label,
+  data,
+  value,
+  setValue,
+  setModal,
+  isOpen,
+}: IProps) => {
   return (
-    <div className={styles["select__wrapper"]}>
+    <div
+      className={styles["select__wrapper"]}
+    >
       <div className={styles["select__wrapper--label"]}>{label}</div>
 
       <div className={styles["select__wrapper--box"]}>

@@ -226,56 +226,60 @@ const ReceiptPage = () => {
 
       <div className={styles["receipts-container-search"]}>
         <div className={styles["receipts-container-search-wrapper"]}>
-          <div className={styles["receipts-container-date-time"]}>
-            <div className={styles["receipts-container-calendar-wrapper"]}>
-              <label
-                className={styles["receipts-container-calendar-wrapper-label"]}
-              >
-                Choose Period
-              </label>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "start" ? null : "start")
-                }
-                className={styles["receipts-container-calendar-button"]}
-              >
-                {formattedDate.startDate}
-              </button>
+          <div className={styles["receipts-container-search-wrapper-date"]}>
+            <label
+              className={styles["receipts-container-calendar-wrapper-label"]}
+            >
+              Choose Period
+            </label>
+            <div className={styles["receipts-container-date-time"]}>
+              <div className={styles["receipts-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(
+                      activeCalendar === "start" ? null : "start"
+                    )
+                  }
+                  className={styles["receipts-container-calendar-button"]}
+                >
+                  {formattedDate.startDate}
+                </button>
 
-              {activeCalendar === "start" && (
-                <div className={styles["receipts-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.startDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, startDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
-            </div>
+                {activeCalendar === "start" && (
+                  <div className={styles["receipts-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.startDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, startDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
 
-            <div className={styles["receipts-container-calendar-wrapper"]}>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "end" ? null : "end")
-                }
-                className={styles["receipts-container-calendar-button"]}
-              >
-                {formattedDate.endDate}
-              </button>
+              <div className={styles["receipts-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(activeCalendar === "end" ? null : "end")
+                  }
+                  className={styles["receipts-container-calendar-button"]}
+                >
+                  {formattedDate.endDate}
+                </button>
 
-              {activeCalendar === "end" && (
-                <div className={styles["receipts-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.endDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, endDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
+                {activeCalendar === "end" && (
+                  <div className={styles["receipts-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.endDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, endDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className={styles["receipts-container-search-select-box"]}>

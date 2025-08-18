@@ -17,6 +17,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+     @include sm_mobile {
+      h1 {
+        font-size: 26px;
+      }
+     }
     .create-button {
       background-color: $main_blue;
       color: #fff;
@@ -43,6 +48,14 @@
       align-items: center;
       gap: 12px;
       width: 100%;
+      &-date {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        @include tablet {
+          width: 100%;
+        }
+      }
       @include tablet {
         flex-direction: column;
         gap: 8px;
@@ -51,11 +64,11 @@
     &-select-box {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(4, calc((100vw - 680px) / 4));
+      grid-template-columns: repeat(4, calc((100% - 40px) / 4));
       align-items: center;
       gap: 12px;
       @include md_desktop {
-        grid-template-columns: repeat(2, calc((100vw - 582px) / 2));
+        grid-template-columns: repeat(2, calc((100% - 10px) / 2));
         row-gap: 4px;
       }
       @include desktop {
@@ -83,10 +96,12 @@
       min-width: 200px;
       width: 100%;
       gap: 24px;
+      max-width: 200px;
     }
     @include tablet {
       flex-direction: row;
       width: 100%;
+      max-width: 100%;
       gap: 12px;
     }
   }
@@ -126,11 +141,29 @@
   &-calendar-popup {
     position: absolute;
     top: 46px;
-    right: 0;
+    left: 0;
     z-index: 100;
     background-color: #fff;
     padding: 16px;
     border-radius: 12px;
     box-shadow: 0 4px 20px #0000001a;
+    max-width: max-content;
+    @include tablet {
+      position: fixed;
+      top: 260px;
+      left: 100px;
+    }
+    @include lg_mobile {
+      top: 250px;
+      left: 40px;
+    }
+    @include mobile {
+      top: 250px;
+      left: 20px;
+    }
+    @include sm_mobile {
+      top: 236px;
+      left: 10px;
+    }
   }
 }

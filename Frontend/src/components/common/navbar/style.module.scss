@@ -41,6 +41,7 @@
   &__auth {
     display: flex;
     align-items: center;
+    margin-left: auto;
     gap: 12px;
     &--settings {
       background-color: $main_white;
