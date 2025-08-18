@@ -1,19 +1,20 @@
 import { del, get, post, put, patch } from "../utils/api";
 
 // Receipt
-const getReceipt = async ({}: //   search,
-//   sortField,
-//   ascending,
-//   page,
-//   size,
-{
-  search: string;
-  sortField: string;
-  ascending: boolean;
+const getReceipt = async ({
+  page,
+  size,
+  filters,
+}: {
   page: number;
   size: number;
+  filters: object;
 }) => {
-  return await post(`receiptdocument/query`, {});
+  return await post(`receiptdocument/query`, {
+    page,
+    size,
+    filters,
+  });
 };
 
 const deleteReceipt = async (id: number) => await del(`receiptdocument/${id}`);
@@ -24,36 +25,20 @@ const createReceipt = async (data: object) =>
   await post(`receiptdocument`, data);
 
 // Shipment Documents
-const getShipment = async ({}: //   dateFrom,
-//   dateTo,
-//   documentNumbers,
-//   clientIds,
-//   statuses,
-//   resourceIds,
-//   unitIds,
-//   search,
-//   sortField,
-//   ascending,
-//   page,
-//   size,
-{
-  dateFrom: string;
-  dateTo: string;
-  documentNumbers: string[];
-
-  clientIds: number[];
-  statuses: number[];
-
-  resourceIds: number[];
-  unitIds: number[];
-
-  search: string;
-  sortField: string;
-  ascending: boolean;
+const getShipment = async ({
+  page,
+  size,
+  filters,
+}: {
   page: number;
   size: number;
+  filters: object;
 }) => {
-  return await post(`shipmentdocument/query`, {});
+  return await post(`shipmentdocument/query`, {
+    page,
+    size,
+    filters,
+  });
 };
 
 const deleteShipment = async (id: number) =>
@@ -70,10 +55,19 @@ const createShipment = async (data: object) =>
   await post(`shipmentdocument`, data);
 
 // Client
-const getClient = async ({ page, size }: { page: number; size: number }) => {
+const getClient = async ({
+  page,
+  size,
+  filters,
+}: {
+  page: number;
+  size: number;
+  filters: object;
+}) => {
   return await post(`client/query`, {
     page,
     size,
+    filters,
   });
 };
 
@@ -86,10 +80,19 @@ const updateClient = async (data: object) => await put(`client`, data);
 const createClient = async (data: object) => await post(`client`, data);
 
 // Resource
-const getResource = async ({ page, size }: { page: number; size: number }) => {
+const getResource = async ({
+  page,
+  size,
+  filters,
+}: {
+  page: number;
+  size: number;
+  filters: object;
+}) => {
   return await post(`resource/query`, {
     page,
-    size
+    size,
+    filters,
   });
 };
 
@@ -103,10 +106,19 @@ const updateResource = async (data: object) => await put(`resource`, data);
 const createResource = async (data: object) => await post(`resource`, data);
 
 // Unit
-const getUnit = async ({ page, size }: { page: number; size: number }) => {
+const getUnit = async ({
+  page,
+  size,
+  filters,
+}: {
+  page: number;
+  size: number;
+  filters: object;
+}) => {
   return await post(`unit/query`, {
     page,
     size,
+    filters,
   });
 };
 
@@ -117,20 +129,21 @@ const getUnitById = async (id: number) => await get(`unit/${id}`);
 const updateUnit = async (data: object) => await put(`unit`, data);
 const createUnit = async (data: object) => await post(`unit`, data);
 
-// Unit
-const getBalance = async ({}: //   search,
-//   sortField,
-//   ascending,
-//   page,
-//   size,
-{
-  search: string;
-  sortField: string;
-  ascending: boolean;
+// Balance
+const getBalance = async ({
+  page,
+  size,
+  filters,
+}: {
   page: number;
   size: number;
+  filters: object;
 }) => {
-  return await post(`balance/query`, {});
+  return await post(`balance/query`, {
+    page,
+    size,
+    filters,
+  });
 };
 
 export {

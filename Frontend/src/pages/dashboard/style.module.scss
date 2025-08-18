@@ -1,7 +1,10 @@
+@use "@/styles/main.module.scss" as *;
+
 .dashboard-container {
   display: flex;
   gap: 12px;
   padding-right: 40px;
+  transition: all 0.6s ease-in-out;
   @include tablet {
     flex-direction: column;
     overflow-y: auto;
@@ -18,7 +21,6 @@
   @include lg_mobile {
     padding-left: 40px;
   }
-  transition: all 0.6s ease-in-out;
   @include mobile {
     padding: 0 20px;
   }
@@ -29,10 +31,10 @@
     width: 100%;
     padding-bottom: 18px;
     @include md_desktop {
+      margin-top: 84px;
       &-loader {
         display: none;
       }
-      margin-top: 84px;
     }
     @include tablet {
       margin-top: 0;

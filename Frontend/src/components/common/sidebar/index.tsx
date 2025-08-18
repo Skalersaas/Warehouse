@@ -58,13 +58,13 @@ const pages = [
 ];
 
 const Sidebar = () => {
-  const [currentPage, setCurrentPage] = useState<string>("/");
+  const [currentPage, setCurrentPage] = useState<string>("");
   const [sidebarStatus, setSidebarStatus] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
   let location = useLocation();
 
   useEffect(() => {
-    setCurrentPage(location.pathname);
+    setCurrentPage("/" + location.pathname.split("/")[1]);
   }, [location]);
 
   const handleChangeStatus = () => {

@@ -12,15 +12,17 @@ import styles from "./styles.module.scss";
 import CustomCalendar from "../../../components/ui/calendar";
 import { toLocalISOString } from "../../../utils/dateFormatter";
 import Select from "../../../components/ui/select";
-import type { ICommonType } from "../../../types/common.type";
-import { Plus } from "lucide-react";
+import type { IResource, IUnit } from "../../../types/common.type";
+import { Plus, Trash } from "lucide-react";
 
 interface initialStateType {
   number: string;
   date: string;
   items: {
     resourceId: number;
+    resourceName?: string;
     unitId: number;
+    unitName?: string;
     quantity: number;
   }[];
 }
@@ -40,8 +42,8 @@ const CreateReceipt = () => {
   const dispatch = useAppDispatch();
 
   const [data, setData] = useState<{
-    resourceData: ICommonType[];
-    unitData: ICommonType[];
+    resourceData: IResource[];
+    unitData: IUnit[];
   }>({
     resourceData: [],
     unitData: [],
@@ -51,19 +53,23 @@ const CreateReceipt = () => {
     resourceValue: {
       id: number;
       name: string;
+      isArchived: boolean | null;
     };
     unitValue: {
       id: number;
       name: string;
+      isArchived: boolean | null;
     };
   }>({
     resourceValue: {
       id: 0,
       name: "",
+      isArchived: false,
     },
     unitValue: {
       id: 0,
       name: "",
+      isArchived: false,
     },
   });
 
@@ -99,33 +105,39 @@ const CreateReceipt = () => {
       ...formData,
       date: toLocalISOString(selectedDate),
     });
-    if (res.data) {
+    if (res?.data) {
       successAlert(`Successfully created`);
       navigate("/receipts");
     }
 
     dispatch(setLoading(false));
   };
-
   const fetchResource = async () => {
     dispatch(setLoading(true));
-    const response = await api(getResource, {});
+    const response = await api(getResource, {
+      filters: {
+        isArchived: "false",
+      },
+    });
     setData((prev) => ({
       ...prev,
-      resourceData: response.data ?? [],
+      resourceData: response?.data ?? [],
     }));
     dispatch(setLoading(false));
   };
   const fetchUnit = async () => {
     dispatch(setLoading(true));
-    const response = await api(getUnit, {});
+    const response = await api(getUnit, {
+      filters: {
+        isArchived: "false",
+      },
+    });
     setData((prev) => ({
       ...prev,
-      unitData: response.data ?? [],
+      unitData: response?.data ?? [],
     }));
     dispatch(setLoading(false));
   };
-
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -136,26 +148,58 @@ const CreateReceipt = () => {
 
   const handleAddItem = () => {
     if (value.resourceValue.id > 0 && value.unitValue.id > 0 && quantity > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        items: [
-          ...prev.items,
-          {
-            resourceId: value.resourceValue.id,
-            unitId: value.unitValue.id,
-            quantity: quantity,
-          },
-        ],
-      }));
+      setFormData((prev) => {
+        const exists = prev.items.some(
+          (item) =>
+            item.resourceId === value.resourceValue.id &&
+            item.unitId === value.unitValue.id
+        );
+
+        if (exists) {
+          errorAlert("This resource with the same unit already exists.");
+          return prev;
+        }
+
+        return {
+          ...prev,
+          items: [
+            ...prev.items,
+            {
+              resourceId: value.resourceValue.id,
+              resourceName: value.resourceValue.name,
+              unitId: value.unitValue.id,
+              unitName: value.unitValue.name,
+              quantity: quantity,
+            },
+          ],
+        };
+      });
 
       setValue({
-        resourceValue: { id: 0, name: "" },
-        unitValue: { id: 0, name: "" },
+        resourceValue: { id: 0, name: "", isArchived: false },
+        unitValue: { id: 0, name: "", isArchived: false },
       });
       setQuantity(0);
     } else {
       errorAlert("Please fill resource, unit, and quantity before adding.");
     }
+  };
+
+  const handleRemoveItem = (resourceId: number, unitId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.filter(
+        (item) => !(item.resourceId === resourceId && item.unitId === unitId)
+      ),
+    }));
+  };
+
+  const handleModal = (key: "resourceModal" | "unitModal", isOpen: boolean) => {
+    setModal({
+      resourceModal: false,
+      unitModal: false,
+      [key]: isOpen,
+    });
   };
 
   useEffect(() => {
@@ -200,47 +244,82 @@ const CreateReceipt = () => {
         <div className={styles["create-receipt-multiple-wrapper"]}>
           <Select
             label="Resource"
-            data={data.resourceData}
-            value={value.resourceValue}
+            data={data?.resourceData}
+            value={value?.resourceValue}
             setValue={(val) =>
               setValue((prev) => ({ ...prev, resourceValue: val }))
             }
-            setModal={(isOpen) =>
-              setModal((prev) => ({ ...prev, resourceModal: isOpen }))
-            }
+            setModal={(isOpen) => handleModal("resourceModal", isOpen)}
             isOpen={modal.resourceModal}
           />
 
           <Select
             label="Unit"
-            data={data.unitData}
-            value={value.unitValue}
+            data={data?.unitData}
+            value={value?.unitValue}
             setValue={(val) =>
               setValue((prev) => ({ ...prev, unitValue: val }))
             }
-            setModal={(isOpen) =>
-              setModal((prev) => ({ ...prev, unitModal: isOpen }))
-            }
+            setModal={(isOpen) => handleModal("unitModal", isOpen)}
             isOpen={modal.unitModal}
           />
-
-          <Input
-            label="Quantity"
-            placeholder="quantity"
-            value={quantity}
-            name="quantity"
-            onChange={(e: {
-              target: { value: React.SetStateAction<number> };
-            }) => setQuantity(Number(e.target.value))}
-          />
-
-          <div
-            className={styles["create-receipt-multiple-wrapper-button"]}
-            onClick={handleAddItem}
-          >
-            <Plus width={14} height={14} />
+          <div className={styles["create-receipt-multiple-wrapper-quantity"]}>
+            <Input
+              label="Quantity"
+              placeholder="quantity"
+              value={quantity}
+              name="quantity"
+              onChange={(e: {
+                target: { value: React.SetStateAction<number> };
+              }) => setQuantity(Number(e.target.value))}
+            />
+            <div
+              className={styles["create-receipt-multiple-wrapper-button"]}
+              onClick={handleAddItem}
+            >
+              <Plus width={14} height={14} />
+            </div>
           </div>
         </div>
+
+        {formData.items.length > 0 && (
+          <div className={styles["create-receipt-form-items"]}>
+            <div className={styles["create-receipt-form-items-head"]}>
+              <div className={styles["create-receipt-form-items-head-row"]}>
+                Resource
+              </div>
+              <div className={styles["create-receipt-form-items-head-row"]}>
+                Unit
+              </div>
+              <div className={styles["create-receipt-form-items-head-row"]}>
+                Quantity
+              </div>
+              <div>Action</div>
+            </div>
+            {formData.items.map((item) => (
+              <div
+                key={`${item.resourceId}-${item.unitId}`}
+                className={styles["create-receipt-form-items-per"]}
+              >
+                <div className={styles["create-receipt-form-items-per-row"]}>
+                  {item.resourceName}
+                </div>
+                <div className={styles["create-receipt-form-items-per-row"]}>
+                  {item.unitName}
+                </div>
+                <div className={styles["create-receipt-form-items-per-row"]}>
+                  {item.quantity}
+                </div>
+                <button
+                  className={styles["create-receipt-form-items-per-delete"]}
+                  onClick={() => handleRemoveItem(item.resourceId, item.unitId)}
+                >
+                  <Trash width={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <Button type="Submit">Create Receipt</Button>
       </form>

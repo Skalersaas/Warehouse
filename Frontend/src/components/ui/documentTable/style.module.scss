@@ -6,7 +6,6 @@
     $section_bg_gradient_first,
     $section_bg_gradient_second
   );
-  box-shadow: 0 4px 4px #0000001a;
   padding: 10px;
   border-radius: 10px;
   display: flex;
@@ -44,8 +43,7 @@
         align-items: center;
         justify-content: center;
       }
-      &--archive,
-      &--sign {
+      &--archive, &--sign {
         width: 20px;
         height: 20px;
         border-radius: 50%;

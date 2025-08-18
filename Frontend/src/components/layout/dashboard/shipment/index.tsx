@@ -1,39 +1,52 @@
 import { useEffect, useState } from "react";
 import styles from "./style.module.scss";
-import type { IShipment } from "../../../../types/common.type";
+import type { IShipmentDocument } from "../../../../types/common.type";
 import { Calendar, Check, Package } from "lucide-react";
 import Loader from "../loader";
 import { formatDate } from "../../../../utils/dateFormatter";
+import { useDispatch } from "react-redux";
+import { setLoading } from "../../../../store/features/app/appSlice";
+import useApi from "../../../../hooks/useApi";
+import { getShipment } from "../../../../services";
 
 const loadBtns = [
   {
     id: 0,
-    name: "Loaded",
+    name: "Signed",
   },
   {
     id: 1,
-    name: "UnLoaded",
+    name: "UnSigned",
   },
 ];
 
 interface IProps {
-  shipmentDocs: IShipment[];
+  shipmentDocs: IShipmentDocument[];
 }
 
 const ShipmentSection = ({ shipmentDocs }: IProps) => {
+  const api = useApi();
+  const dispatch = useDispatch();
+
   const [activeStatus, setActiveStatus] = useState<number>(0);
   const handleClick = (id: number) => {
     setActiveStatus(id);
   };
 
-  const [loadPacks, setLoadPacks] = useState<IShipment[]>();
+  const [loadPacks, setLoadPacks] = useState<IShipmentDocument[]>();
+  const fetchShipmentDocs = async () => {
+    dispatch(setLoading(true));
+    const response = await api(getShipment, {
+      filters: {
+        status: String(activeStatus),
+      }
+    });
+    setLoadPacks(response.data ?? []);
+    dispatch(setLoading(false));
+  };
 
   useEffect(() => {
-    const filteredDocuments = shipmentDocs?.filter(
-      (doc: IShipment) => doc.status === activeStatus
-    );
-
-    setLoadPacks(filteredDocuments);
+    fetchShipmentDocs();
   }, [activeStatus]);
 
   return (
@@ -42,7 +55,7 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
         Shipment Services
       </div>
       <div className={styles["shipment__container--loader"]}>
-        <Loader shipmentDocs={shipmentDocs}/>
+        <Loader shipmentDocs={shipmentDocs} />
       </div>
       <div className={styles["shipment__section"]}>
         <div className={styles["shipment__section--header"]}>
@@ -76,7 +89,8 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                     {doc.clientName}
                   </div>
                   <div className={styles["shipment__section--status"]}>
-                    <Check width={12} /> {doc.statusName}
+                    <Check width={12} />{" "}
+                    {doc.status === 0 ? "Signed" : "UnSign"}
                   </div>
                 </div>
 

@@ -1,24 +1,29 @@
+@use "@/styles/main.module.scss" as *;
+
 .balance__table__container {
   background-image: linear-gradient(
     to right bottom,
     $section_bg_gradient_first,
     $section_bg_gradient_second
   );
-  padding: 20px;
-  border-radius: 20px;
+  padding: 10px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   &--row {
     background-color: $main_white;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 8px;
+    border-radius: 8px;
     display: flex;
+    align-items: center;
     gap: 4px;
     &--column {
       width: 100%;
-      max-width: 200px;
-      border-right: 1px solid;
+      max-width: 400px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
     &--actions {
       margin-left: auto;

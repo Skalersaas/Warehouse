@@ -1,7 +1,10 @@
+@use "@/styles/main.module.scss" as *;
+
 #input {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
   label {
     font-size: 14px;
     color: $first_sub_text_gray;

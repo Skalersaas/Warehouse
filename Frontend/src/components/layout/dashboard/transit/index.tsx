@@ -1,14 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./style.module.scss";
-import type { IShipment } from "../../../../types/common.type";
+import type { IShipmentDocument } from "../../../../types/common.type";
 import { formatDate } from "../../../../utils/dateFormatter";
+import { getShipment } from "../../../../services";
+import { useDispatch } from "react-redux";
+import { setLoading } from "../../../../store/features/app/appSlice";
+import useApi from "../../../../hooks/useApi";
 
-interface IProps {
-  shipmentDocs: IShipment[];
-}
+const RecentDelivery = () => {
+  const api = useApi();
+  const dispatch = useDispatch();
 
-const RecentDelivery = ({ shipmentDocs }: IProps) => {
-  const unloadPacks = (shipmentDocs || [])?.filter((doc) => doc.status === 1);
+  const [unloadPacks, setLoadPacks] = useState<IShipmentDocument[]>([]);
+  const fetchShipmentDocs = async () => {
+    dispatch(setLoading(true));
+    const response = await api(getShipment, {
+      filters: {
+        status: "1",
+      },
+    });
+    setLoadPacks(response.data ?? []);
+    dispatch(setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchShipmentDocs();
+  }, []);
+
   const currentDelivery =
     unloadPacks.length > 0
       ? unloadPacks?.reduce((prev, current) => {

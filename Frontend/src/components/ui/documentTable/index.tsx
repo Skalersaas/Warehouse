@@ -1,26 +1,30 @@
 import styles from "./style.module.scss";
-import type { ICommonType } from "../../../types/common.type";
-import { Archive, ArchiveX, Info, Trash } from "lucide-react";
+import type { ICommonDocument } from "../../../types/common.type";
+import {
+  FilePenLineIcon,
+  Info,
+  Trash,
+  Undo2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
+import { formatDate } from "../../../utils/dateFormatter";
 
 interface IProps {
-  data: ICommonType[];
-  isClient?: boolean;
+  data: ICommonDocument[];
   page: string;
   setAlertIsOpen: Dispatch<SetStateAction<boolean>>;
   setSelectedId: Dispatch<SetStateAction<number | undefined>>;
-  setArchiveStatus?: Dispatch<SetStateAction<boolean | null>>;
+  setSignStatus?: Dispatch<SetStateAction<number | undefined>>;
   setAlertAction?: Dispatch<SetStateAction<string>>;
 }
 
-const Table = ({
+const DocumentTable = ({
   data,
-  isClient,
   page,
   setAlertIsOpen,
   setSelectedId,
-  setArchiveStatus,
+  setSignStatus,
   setAlertAction,
 }: IProps) => {
   return (
@@ -29,13 +33,16 @@ const Table = ({
         data.map((dt) => (
           <div key={dt.id} className={styles["table__container--row"]}>
             <div className={styles["table__container--row--column"]}>
-              {dt.name}
+              {dt.number}
             </div>
-            {isClient && (
+            {dt.clientId && (
               <div className={styles["table__container--row--column"]}>
-                {dt?.address}
+                {dt.clientName}
               </div>
             )}
+            <div className={styles["table__container--row--column"]}>
+              {formatDate(dt.date)}
+            </div>
             <div className={styles["table__container--row--actions"]}>
               <Link
                 to={`/${page}/${dt.id}`}
@@ -43,21 +50,23 @@ const Table = ({
               >
                 <Info width={14} />
               </Link>
+              {["shipments"].includes(page) && (
                 <div
-                  className={styles["table__container--row--action--archive"]}
+                  className={styles["table__container--row--action--sign"]}
                   onClick={() => {
                     setAlertIsOpen(true);
                     setSelectedId(dt.id);
-                    setArchiveStatus?.(dt.isArchived);
-                    setAlertAction?.("archive");
+                    setSignStatus?.(dt?.status);
+                    setAlertAction?.("sign");
                   }}
                 >
-                  {dt.isArchived ? (
-                    <ArchiveX width={14} />
+                  {dt.status === 1 ? (
+                    <Undo2 width={14} />
                   ) : (
-                    <Archive width={14} />
+                    <FilePenLineIcon width={14} />
                   )}
                 </div>
+              )}
               <div
                 className={styles["table__container--row--action--delete"]}
                 onClick={() => {
@@ -78,4 +87,4 @@ const Table = ({
   );
 };
 
-export default Table;
+export default DocumentTable;

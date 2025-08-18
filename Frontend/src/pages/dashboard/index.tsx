@@ -10,12 +10,12 @@ import { setLoading } from "../../store/features/app/appSlice";
 import useApi from "../../hooks/useApi";
 import { getClient, getShipment } from "../../services";
 import { useEffect, useState } from "react";
-import type { IClient, IShipment } from "../../types/common.type";
+import type { IClient, IShipmentDocument } from "../../types/common.type";
 
 const Dashboard = () => {
   const api = useApi();
   const dispatch = useDispatch();
-  const [shipmentData, setShipmentData] = useState<IShipment[]>([]);
+  const [shipmentData, setShipmentData] = useState<IShipmentDocument[]>([]);
   const [clientData, setClientData] = useState<IClient[]>([]);
 
   const fetchShipmentDocs = async () => {
@@ -45,10 +45,10 @@ const Dashboard = () => {
           <Loader shipmentDocs={shipmentData} />
         </div>
         <div className={styles["delivery-section-header"]}>
-          <RecentDelivery shipmentDocs={shipmentData} />
+          <RecentDelivery />
           <Clients clients={clientData} />
         </div>
-        <TrackingDelivery shipmentDocs={shipmentData} />
+        <TrackingDelivery />
       </div>
     </div>
   );

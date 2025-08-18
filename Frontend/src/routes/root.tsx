@@ -5,12 +5,6 @@ import BalancePage from "../pages/balances";
 import ClientPage from "../pages/clients";
 import UnitPage from "../pages/units";
 import ResourcePage from "../pages/resources";
-import CreateClient from "../pages/clients/create";
-import ClientDetail from "../pages/clients/detail";
-import ResourceDetail from "../pages/resources/detail";
-import CreateResource from "../pages/resources/create";
-import UnitDetail from "../pages/units/detail";
-import CreateUnit from "../pages/units/create";
 import ReceiptPage from "../pages/receipts";
 import ShipmentPage from "../pages/shipment";
 import ReceiptDetail from "../pages/receipts/detail";
@@ -41,38 +35,28 @@ const router = createBrowserRouter([
           { path: "create", Component: CreateShipment },
         ],
       },
-
-      // {
-      //   path: "auth",
-      //   Component: AuthLayout,
-      //   children: [
-      //     { path: "login", Component: Login },
-      //     { path: "register", Component: Register },
-      //   ],
-      // },
-
       {
         path: "/resources",
         children: [
           { index: true, Component: ResourcePage },
-          { path: ":id", Component: ResourceDetail },
-          { path: "create", Component: CreateResource },
+          { path: ":id", Component: ResourcePage },
+          { path: "create", Component: ResourcePage },
         ],
       },
       {
         path: "/units",
         children: [
           { index: true, Component: UnitPage },
-          { path: ":id", Component: UnitDetail },
-          { path: "create", Component: CreateUnit },
+          { path: ":id", Component: UnitPage },
+          { path: "create", Component: UnitPage },
         ],
       },
       {
         path: "/clients",
         children: [
           { index: true, Component: ClientPage },
-          { path: ":id", Component: ClientDetail },
-          { path: "create", Component: CreateClient },
+          { path: ":id", Component: ClientPage },
+          { path: "create", Component: ClientPage },
         ],
       },
     ],

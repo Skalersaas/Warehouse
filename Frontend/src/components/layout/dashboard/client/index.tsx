@@ -1,12 +1,14 @@
 import { Eye, User2 } from "lucide-react";
 import styles from "./style.module.scss";
 import type { ICommonType } from "../../../../types/common.type";
+import { useNavigate } from "react-router-dom";
 
 interface IProps {
   clients: ICommonType[];
 }
 
 const Clients = ({clients}: IProps) => {
+  const navigate = useNavigate();
   return (
     <div className={styles["client__container"]}>
       <div className={styles["client__container--title"]}>Clients</div>
@@ -24,7 +26,7 @@ const Clients = ({clients}: IProps) => {
                 {user?.address}
               </div>
             </div>
-            <button className={styles["client__section--card--button"]}>
+            <button className={styles["client__section--card--button"]} onClick={()=> navigate(`/clients/${user.id}`)}>
               <Eye width={12} />
             </button>
           </div>

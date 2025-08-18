@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Input from "../../../components/ui/input";
 import Button from "../../../components/ui/button";
 import styles from "./styles.module.scss";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useApi from "../../../hooks/useApi";
 import { useAppDispatch } from "../../../store/hooks";
 import { setLoading } from "../../../store/features/app/appSlice";
@@ -14,6 +14,12 @@ import {
   updateResource,
 } from "../../../services";
 import type { IResource } from "../../../types/common.type";
+import { X } from "lucide-react";
+
+interface IProps {
+  isOpen: boolean;
+  setModal: (isOpen: boolean) => void;
+}
 
 interface initialStateType {
   name: string;
@@ -24,15 +30,17 @@ const initialState = {
   isArchived: false,
 };
 
-const ResourceDetail = () => {
+const ResourceDetail = ({ isOpen, setModal }: IProps) => {
   const api = useApi();
   const [formData, setFormData] = useState<initialStateType>(initialState);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
 
   const apiCall = async (data: IResource) => {
     const res = await api(updateResource, data);
-    if (res.data) {
+    if (res?.data) {
       fetchResource();
       setFormData({ ...initialState });
       successAlert(`Successfully updated`);
@@ -80,42 +88,79 @@ const ResourceDetail = () => {
   const handleArchive = async () => {
     dispatch(setLoading(true));
     if (formData.isArchived) {
-      await api(unArchiveResource, id);
-      fetchResource();
+      const res = await api(unArchiveResource, id);
+      if (res.success) {
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: false,
+        }));
+        successAlert(res.message);
+      }
     } else {
-      await api(archiveResource, id);
-      fetchResource();
+      const res = await api(archiveResource, id);
+      if (res.success) {
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: true,
+        }));
+        successAlert(res.message);
+      }
     }
     dispatch(setLoading(false));
   };
 
   useEffect(() => {
-    fetchResource();
-  }, []);
+    if (location.pathname === `/resources/${id}`) {
+      fetchResource();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === `/resources/${id}`) {
+      setModal(true);
+    }
+  }, [location.pathname]);
 
   return (
-    <div className={styles["detail-resource-container"]}>
-      <h1>Detail Resource</h1>
-      <form onSubmit={handleSubmit} className={styles["detail-resource-form"]}>
-        <Input
-          label="Resource Name"
-          placeholder="name"
-          value={formData?.name}
-          name="name"
-          onChange={handleChange}
-        />
-
-        <div className={styles["detail-resource-form-buttons"]}>
-          <Button type="Submit">Update Resource</Button>
-          <Button
-            type="button"
-            onClick={handleArchive}
-            style={{ backgroundColor: "#d19b13" }}
-          >
-            {formData.isArchived ? "Unarchive" : "Archive"} Resource
-          </Button>
+    <div
+      className={`${styles["detail-resource-container"]} ${
+        isOpen && styles["active"]
+      }`}
+    >
+      <div className={styles["detail-resource-container-box"]}>
+        <div
+          className={styles["detail-resource-container-close"]}
+          onClick={() => {
+            navigate("/resources");
+          }}
+        >
+          <X width={26} />
         </div>
-      </form>
+        <h1>Detail Resource</h1>
+        <form
+          onSubmit={handleSubmit}
+          className={styles["detail-resource-form"]}
+        >
+          <Input
+            label="Resource Name"
+            placeholder="name"
+            value={formData?.name}
+            name="name"
+            onChange={handleChange}
+          />
+
+          <div className={styles["detail-resource-form-buttons"]}>
+            <Button type="Submit">Update Resource</Button>
+            <Button
+              type="button"
+              onClick={handleArchive}
+              style={{ backgroundColor: "#d19b13" }}
+            >
+              {formData.isArchived ? "Unarchive" : "Archive"} Resource
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

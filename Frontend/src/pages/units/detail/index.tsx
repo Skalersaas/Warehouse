@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Input from "../../../components/ui/input";
 import Button from "../../../components/ui/button";
 import styles from "./styles.module.scss";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useApi from "../../../hooks/useApi";
 import { useAppDispatch } from "../../../store/hooks";
 import { setLoading } from "../../../store/features/app/appSlice";
@@ -14,6 +14,12 @@ import {
   updateUnit,
 } from "../../../services";
 import type { IUnit } from "../../../types/common.type";
+import { X } from "lucide-react";
+
+interface IProps {
+  isOpen: boolean;
+  setModal: (isOpen: boolean) => void;
+}
 
 interface initialStateType {
   name: string;
@@ -24,16 +30,18 @@ const initialState = {
   isArchived: false,
 };
 
-const UnitDetail = () => {
+const UnitDetail = ({ isOpen, setModal }: IProps) => {
   const api = useApi();
   const [formData, setFormData] = useState<initialStateType>(initialState);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
 
   const apiCall = async (data: IUnit) => {
     const res = await api(updateUnit, data);
-    if (res.data) {
-      fetchResource();
+    if (res?.data) {
+      fetchUnit();
       setFormData({ ...initialState });
       successAlert(`Successfully updated`);
     }
@@ -66,7 +74,7 @@ const UnitDetail = () => {
     }));
   };
 
-  const fetchResource = async () => {
+  const fetchUnit = async () => {
     dispatch(setLoading(true));
     const res = await api(getUnitById, id);
     setFormData({
@@ -79,42 +87,76 @@ const UnitDetail = () => {
   const handleArchive = async () => {
     dispatch(setLoading(true));
     if (formData.isArchived) {
-      await api(unArchiveUnit, id);
-      fetchResource();
+      const res = await api(unArchiveUnit, id);
+      if (res.success) {
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: false,
+        }));
+        successAlert(res.message);
+      }
     } else {
-      await api(archiveUnit, id);
-      fetchResource();
+      const res = await api(archiveUnit, id);
+      if (res.success) {
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: true,
+        }));
+        successAlert(res.message);
+      }
     }
     dispatch(setLoading(false));
   };
 
   useEffect(() => {
-    fetchResource();
-  }, []);
+    if (location.pathname === `/units/${id}`) {
+      fetchUnit();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === `/units/${id}`) {
+      setModal(true);
+    }
+  }, [location.pathname]);
 
   return (
-    <div className={styles["detail-unit-container"]}>
-      <h1>Detail Unit</h1>
-      <form onSubmit={handleSubmit} className={styles["detail-unit-form"]}>
-        <Input
-          label="Unit Name"
-          placeholder="name"
-          value={formData?.name}
-          name="name"
-          onChange={handleChange}
-        />
-
-        <div className={styles["detail-unit-form-buttons"]}>
-          <Button type="Submit">Update Unit</Button>
-          <Button
-            type="button"
-            onClick={handleArchive}
-            style={{ backgroundColor: "#d19b13" }}
-          >
-            {formData.isArchived ? "Unarchive" : "Archive"} Unit
-          </Button>
+    <div
+      className={`${styles["detail-unit-container"]} ${
+        isOpen && styles["active"]
+      }`}
+    >
+      <div className={styles["detail-unit-container-box"]}>
+        <div
+          className={styles["detail-unit-container-close"]}
+          onClick={() => {
+            navigate("/units");
+          }}
+        >
+          <X width={26} />
         </div>
-      </form>
+        <h1>Detail Unit</h1>
+        <form onSubmit={handleSubmit} className={styles["detail-unit-form"]}>
+          <Input
+            label="Unit Name"
+            placeholder="name"
+            value={formData?.name}
+            name="name"
+            onChange={handleChange}
+          />
+
+          <div className={styles["detail-unit-form-buttons"]}>
+            <Button type="Submit">Update Unit</Button>
+            <Button
+              type="button"
+              onClick={handleArchive}
+              style={{ backgroundColor: "#d19b13" }}
+            >
+              {formData.isArchived ? "Unarchive" : "Archive"} Unit
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

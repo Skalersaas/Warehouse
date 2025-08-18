@@ -1,29 +1,52 @@
 import { Check, Maximize2, Minimize2, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "./style.module.scss";
-import type {
-  IShipment
-} from "../../../../types/common.type";
+import type { IShipmentDocument } from "../../../../types/common.type";
+import { useDispatch } from "react-redux";
+import { setLoading } from "../../../../store/features/app/appSlice";
+import useApi from "../../../../hooks/useApi";
+import { getShipment } from "../../../../services";
 
-interface IProps {
-  shipmentDocs: IShipment[];
-}
+const TrackingDelivery = () => {
+  const api = useApi();
+  const dispatch = useDispatch();
 
-const TrackingDelivery = ({ shipmentDocs }: IProps) => {
-  const [loadedPacks, setLoadedPacks] = useState<IShipment[]>();
+  const [loadedPacks, setLoadedPacks] = useState<IShipmentDocument[]>([]);
+  const [allLoadedPacks, setAllLoadedPacks] = useState<IShipmentDocument[]>([]);
   const [modalStatus, setModalStatus] = useState(true);
   const handleChangeStatus = () => {
     setModalStatus((modalStatus) => !modalStatus);
   };
 
+  const fetchShipmentDocs = async (status: number) => {
+    dispatch(setLoading(true));
+    const response = await api(getShipment, {
+      filters: {
+        status: String(status),
+      },
+    });
+    dispatch(setLoading(false));
+    return response?.data ?? [];
+  };
+
   useEffect(() => {
-    const filterLoadedDocuments = shipmentDocs?.filter((doc: IShipment) => doc.status === 0)
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const fetchData = async () => {
+      const loadedDocs = await fetchShipmentDocs(0);
+      const unLoadedDocs = await fetchShipmentDocs(1);
 
-    const filterUnLoadedDocuments = shipmentDocs?.filter((doc: IShipment) => doc.status === 1)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      const filterLoadedDocuments = loadedDocs.sort(
+        (a: { date: string }, b: { date: string }) =>
+          a.date.localeCompare(b.date)
+      );
+      const filterUnLoadedDocuments = unLoadedDocs.sort(
+        (a: { date: string }, b: { date: string }) =>
+          a.date.localeCompare(b.date)
+      );
+      setLoadedPacks(filterLoadedDocuments);
+      setAllLoadedPacks([...filterLoadedDocuments, ...filterUnLoadedDocuments]);
+    };
 
-    setLoadedPacks([...filterLoadedDocuments, ...filterUnLoadedDocuments]);
+    fetchData();
   }, []);
 
   return (
@@ -59,7 +82,7 @@ const TrackingDelivery = ({ shipmentDocs }: IProps) => {
             Tracking Delivery
           </div>
           <div className={styles["tracking__delivery--card--title--number"]}>
-            ID#{shipmentDocs?.filter((p) => p.status === 0).pop()?.number}
+            ID#{loadedPacks?.pop()?.number}
           </div>
         </div>
 
@@ -68,7 +91,7 @@ const TrackingDelivery = ({ shipmentDocs }: IProps) => {
             modalStatus ? "" : styles["inactive--track"]
           }`}
         >
-          {loadedPacks?.map((packs) => {
+          {allLoadedPacks?.map((packs) => {
             return (
               <div
                 key={packs.id}
@@ -88,7 +111,7 @@ const TrackingDelivery = ({ shipmentDocs }: IProps) => {
                   >
                     {packs.status === 0 &&
                     packs ===
-                      shipmentDocs?.filter((p) => p.status === 0).pop() ? (
+                      loadedPacks?.pop() ? (
                       <Truck width={10} />
                     ) : packs.status === 0 ? (
                       <Check width={10} />
@@ -117,7 +140,15 @@ const TrackingDelivery = ({ shipmentDocs }: IProps) => {
                       ]
                     }
                   >
-                    <div className={styles["tracking__delivery--card--track--default--detail--client"]}>{packs.clientName} </div>
+                    <div
+                      className={
+                        styles[
+                          "tracking__delivery--card--track--default--detail--client"
+                        ]
+                      }
+                    >
+                      {packs.clientName}{" "}
+                    </div>
                   </div>
 
                   <div

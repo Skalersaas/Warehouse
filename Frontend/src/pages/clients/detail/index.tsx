@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Input from "../../../components/ui/input";
 import Button from "../../../components/ui/button";
 import styles from "./styles.module.scss";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useApi from "../../../hooks/useApi";
 import { useAppDispatch } from "../../../store/hooks";
 import { setLoading } from "../../../store/features/app/appSlice";
@@ -14,6 +14,12 @@ import {
   updateClient,
 } from "../../../services";
 import type { IClient } from "../../../types/common.type";
+import { X } from "lucide-react";
+
+interface IProps {
+  isOpen: boolean;
+  setModal: (isOpen: boolean) => void;
+}
 
 interface initialStateType {
   name: string;
@@ -26,15 +32,17 @@ const initialState = {
   isArchived: false,
 };
 
-const ClientDetail = () => {
+const ClientDetail = ({ isOpen, setModal }: IProps) => {
   const api = useApi();
   const [formData, setFormData] = useState<initialStateType>(initialState);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
 
   const apiCall = async (data: IClient) => {
     const res = await api(updateClient, data);
-    if (res.data) {
+    if (res?.data) {
       fetchClient();
       setFormData({ ...initialState });
       successAlert(`Successfully updated`);
@@ -83,46 +91,84 @@ const ClientDetail = () => {
   const handleArchive = async () => {
     dispatch(setLoading(true));
     if (formData.isArchived) {
-      await api(unArchiveClient, id);
-      fetchClient();
+      const res = await api(unArchiveClient, id);
+      if (res.success) {
+        successAlert(res.message);
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: false,
+        }));
+      }
     } else {
-      await api(archiveClient, id);
-      fetchClient();
+      const res = await api(archiveClient, id);
+      if (res.success) {
+        successAlert(res.message);
+        setFormData((prev) => ({
+          ...prev,
+          isArchived: true,
+        }));
+      }
     }
     dispatch(setLoading(false));
   };
 
   useEffect(() => {
-    fetchClient();
-  }, []);
+    if (location.pathname === `/clients/${id}`) {
+      fetchClient();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === `/clients/${id}`) {
+      setModal(true);
+    }
+  }, [location.pathname]);
 
   return (
-    <div className={styles["detail-client-container"]}>
-      <h1>Detail Client</h1>
-      <form onSubmit={handleSubmit} className={styles["detail-client-form"]}>
-        <Input
-          label="Client Name"
-          placeholder="name"
-          value={formData?.name}
-          name="name"
-          onChange={handleChange}
-        />
-
-        <Input
-          label="Client Address"
-          placeholder="address"
-          value={formData?.address}
-          name="address"
-          onChange={handleChange}
-        />
-
-        <div className={styles["detail-client-form-buttons"]}>
-          <Button type="Submit">Update Client</Button>
-          <Button type="button" onClick={handleArchive} style={{backgroundColor: "#d19b13"}}>
-            {formData.isArchived ? "Unarchive" : "Archive"} Client
-          </Button>
+    <div
+      className={`${styles["detail-client-container"]} ${
+        isOpen && styles["active"]
+      }`}
+    >
+      <div className={styles["detail-client-container-box"]}>
+        <div
+          className={styles["detail-client-container-close"]}
+          onClick={() => {
+            navigate("/clients");
+          }}
+        >
+          <X width={26} />
         </div>
-      </form>
+        <h1>Detail Client</h1>
+        <form onSubmit={handleSubmit} className={styles["detail-client-form"]}>
+          <Input
+            label="Client Name"
+            placeholder="name"
+            value={formData?.name}
+            name="name"
+            onChange={handleChange}
+          />
+
+          <Input
+            label="Client Address"
+            placeholder="address"
+            value={formData?.address}
+            name="address"
+            onChange={handleChange}
+          />
+
+          <div className={styles["detail-client-form-buttons"]}>
+            <Button type="Submit">Update Client</Button>
+            <Button
+              type="button"
+              onClick={handleArchive}
+              style={{ backgroundColor: "#d19b13" }}
+            >
+              {formData.isArchived ? "Unarchive" : "Archive"} Client
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

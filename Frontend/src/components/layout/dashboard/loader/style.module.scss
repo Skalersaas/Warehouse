@@ -1,3 +1,5 @@
+@use "@/styles/main.module.scss" as *;
+
 .shipment__loader {
   display: flex;
   align-items: center;

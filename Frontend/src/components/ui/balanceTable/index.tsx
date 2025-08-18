@@ -8,14 +8,14 @@ interface IProps {
 const BalanceTable = ({ data }: IProps) => {
   return (
     <div className={styles["balance__table__container"]}>
-      {data.length ? (
-        data.map((dt) => (
+      {data.length > 0 ? (
+        data?.map((dt) => (
           <div key={dt.id} className={styles["balance__table__container--row"]}>
             <div className={styles["balance__table__container--row--column"]}>
-              {dt.resourceId}
+              {dt.resourceName}
             </div>
             <div className={styles["balance__table__container--row--column"]}>
-              {dt.unitId}
+              {dt.unitName}
             </div>
             <div className={styles["balance__table__container--row--column"]}>
               {dt.quantity}

@@ -1,3 +1,5 @@
+@use "@/styles/main.module.scss" as *;
+
 .pagination__container {
   display: flex;
   align-items: center;
@@ -7,6 +9,7 @@
     $section_bg_gradient_first,
     $section_bg_gradient_second
   );
+  box-shadow: 0 4px 4px #0000001a;
   padding: 10px;
   border-radius: 10px;
   user-select: none;
@@ -99,7 +102,7 @@
       &:first-child {
         padding: 6px 16px 6px 8px;
         &::after {
-          content: "Previos";
+          content: "Previous";
           @include tablet {
             content: "";
           }
