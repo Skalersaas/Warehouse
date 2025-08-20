@@ -61,23 +61,23 @@ const ReceiptDetail = () => {
 
   const [value, setValue] = useState<{
     resourceValue: {
-      id: number;
+      id: string;
       name: string;
       isArchived: boolean | null;
     };
     unitValue: {
-      id: number;
+      id: string;
       name: string;
       isArchived: boolean | null;
     };
   }>({
     resourceValue: {
-      id: 0,
+      id: "",
       name: "",
       isArchived: false,
     },
     unitValue: {
-      id: 0,
+      id: "",
       name: "",
       isArchived: false,
     },
@@ -193,12 +193,12 @@ const ReceiptDetail = () => {
   };
 
   const handleAddItem = () => {
-    if (value.resourceValue.id > 0 && value.unitValue.id > 0 && quantity > 0) {
+    if (Number(value.resourceValue.id) > 0 && Number(value.unitValue.id) > 0 && quantity > 0) {
       setFormData((prev) => {
         const exists = prev.items.some(
           (item) =>
-            item.resourceId === value.resourceValue.id &&
-            item.unitId === value.unitValue.id
+            item.resourceId === Number(value.resourceValue.id) &&
+            item.unitId === Number(value.unitValue.id)
         );
 
         if (exists) {
@@ -211,9 +211,9 @@ const ReceiptDetail = () => {
           items: [
             ...prev.items,
             {
-              resourceId: value.resourceValue.id,
+              resourceId: Number(value.resourceValue.id),
               resourceName: value.resourceValue.name,
-              unitId: value.unitValue.id,
+              unitId: Number(value.unitValue.id),
               unitName: value.unitValue.name,
               quantity: quantity,
             },
@@ -222,8 +222,8 @@ const ReceiptDetail = () => {
       });
 
       setValue({
-        resourceValue: { id: 0, name: "", isArchived: false },
-        unitValue: { id: 0, name: "", isArchived: false },
+        resourceValue: { id: "", name: "", isArchived: false },
+        unitValue: { id: "", name: "", isArchived: false },
       });
       setQuantity(0);
     } else {

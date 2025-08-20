@@ -58,6 +58,9 @@
       }
       -ms-overflow-style: none;
       scrollbar-width: none;
+      .active {
+        background-color: $second_blue;
+      }
     }
     &--option {
       min-height: max-content;

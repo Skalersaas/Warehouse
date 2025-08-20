@@ -17,6 +17,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    @include sm_mobile {
+      h1 {
+        font-size: 26px;
+      }
+    }
     .create-button {
       background-color: $main_blue;
       color: #fff;
@@ -34,15 +39,9 @@
   &-search {
     display: flex;
     align-items: end;
-    @include desktop {
+    @include md_desktop {
       flex-direction: column;
       gap: 12px;
-    }
-    @include tablet {
-      gap: 0;
-      button {
-        margin-top: -40px;
-      }
     }
     @include mobile {
       gap: 12px;
@@ -55,27 +54,31 @@
       align-items: center;
       gap: 12px;
       width: 100%;
+      @include md_desktop {
+        align-items: start;
+      }
       @include tablet {
         flex-direction: column;
-        gap: 8px;
+      }
+      &-date {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
       }
     }
     &-select-box {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(3, calc((100vw - 670px) / 3));
+      grid-template-columns: repeat(3, calc((100% - 36px) / 3));
       align-items: center;
       gap: 12px;
-      @include desktop {
-        grid-template-columns: repeat(3, calc((100vw - 376px) / 3));
+      @include md_desktop {
+        grid-template-columns: repeat(3, calc((100% - 22px) / 3));
       }
-      @include tablet {
-        grid-template-columns: repeat(2, calc((100vw - 152px) / 2));
+      @include md_desktop {
+        grid-template-columns: repeat(2, calc((100% - 22px) / 2));
       }
       @include lg_mobile {
-        grid-template-columns: repeat(2, calc((100vw - 92px) / 2));
-      }
-      @include mobile {
         display: flex;
         flex-direction: column;
       }
@@ -85,7 +88,12 @@
     display: flex;
     align-items: end;
     gap: 4px;
+    @include md_desktop {
+      flex-direction: column;
+      gap: 32px;
+    }
     @include tablet {
+      flex-direction: row;
       width: 100%;
       gap: 12px;
     }
@@ -96,9 +104,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    @include tablet {
-      width: 100%;
-    }
     &-label {
       color: $first_sub_text_gray;
       font-size: 14px;
@@ -116,6 +121,7 @@
     transition: all 0.2s ease;
     min-width: fit-content;
     white-space: nowrap;
+    min-width: 150px;
     @include tablet {
       width: 100%;
     }
@@ -123,11 +129,24 @@
   &-calendar-popup {
     position: absolute;
     top: 46px;
-    right: 0;
+    left: 0;
     z-index: 100;
     background-color: #fff;
     padding: 16px;
     border-radius: 12px;
     box-shadow: 0 4px 20px #0000001a;
+    max-width: max-content;
+    @include lg_mobile {
+      position: fixed;
+      top: 250px;
+      left: 40px;
+    }
+    @include mobile {
+      left: 20px;
+    }
+    @include sm_mobile {
+      top: 236px;
+      left: 10px;
+    }
   }
 }

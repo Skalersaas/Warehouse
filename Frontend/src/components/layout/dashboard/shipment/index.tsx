@@ -16,7 +16,7 @@ const loadBtns = [
   },
   {
     id: 1,
-    name: "UnSigned",
+    name: "Draft",
   },
 ];
 
@@ -28,9 +28,9 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
   const api = useApi();
   const dispatch = useDispatch();
 
-  const [activeStatus, setActiveStatus] = useState<number>(0);
-  const handleClick = (id: number) => {
-    setActiveStatus(id);
+  const [activeStatus, setActiveStatus] = useState<string>("Signed");
+  const handleClick = (name: string) => {
+    setActiveStatus(name);
   };
 
   const [loadPacks, setLoadPacks] = useState<IShipmentDocument[]>();
@@ -38,8 +38,8 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
     dispatch(setLoading(true));
     const response = await api(getShipment, {
       filters: {
-        status: String(activeStatus),
-      }
+        status: activeStatus,
+      },
     });
     setLoadPacks(response.data ?? []);
     dispatch(setLoading(false));
@@ -66,9 +66,9 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
             {loadBtns.map((btn) => (
               <button
                 key={btn.id}
-                onClick={() => handleClick(btn.id)}
+                onClick={() => handleClick(btn.name)}
                 className={` ${styles["shipment__section--button"]} ${
-                  activeStatus === btn.id && styles["active--button"]
+                  activeStatus === btn.name && styles["active--button"]
                 }`}
               >
                 {btn.name}
@@ -89,8 +89,8 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                     {doc.clientName}
                   </div>
                   <div className={styles["shipment__section--status"]}>
-                    <Check width={12} />{" "}
-                    {doc.status === 0 ? "Signed" : "UnSign"}
+                    <Check width={12} />
+                    {doc.status === 1 ? "Signed" : "Draft"}
                   </div>
                 </div>
 
@@ -120,7 +120,15 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                         >
                           <Package />
                         </div>
-                        {rs.resourceName}
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.resourceName}
+                        </div>
                       </div>
                       <div
                         className={
@@ -129,8 +137,24 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                           ]
                         }
                       >
-                        <div>{rs.quantity}</div>
-                        <div>{rs.unitName}</div>
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.quantity}
+                        </div>
+                        <div
+                          className={
+                            styles[
+                              "shipment__section--body--card--resource--detail--text"
+                            ]
+                          }
+                        >
+                          {rs.unitName}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -141,7 +165,7 @@ const ShipmentSection = ({ shipmentDocs }: IProps) => {
                   className={styles["shipment__section--body--card--footer"]}
                 >
                   <div className={styles["shipment__section--number"]}>
-                    ID#{doc.number}
+                    #{doc.number}
                   </div>
                   <div className={styles["shipment__section--date"]}>
                     <Calendar width={12} /> {formatDate(doc.date)}

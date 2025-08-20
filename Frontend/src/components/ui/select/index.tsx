@@ -4,19 +4,29 @@ import type { ICommonType } from "../../../types/common.type";
 interface IProps {
   label: string;
   data: ICommonType[];
-  value: { id: number; name: string; isArchived: boolean | null };
+  value: { id: string; name: string; isArchived: boolean | null };
   setValue: (value: {
-    id: number;
+    id: string;
     name: string;
     isArchived: boolean | null;
   }) => void;
   setModal: (isOpen: boolean) => void;
   isOpen: boolean;
+  inSearch?: boolean;
 }
 
-const Select = ({ label, data, value, setValue, setModal, isOpen }: IProps) => {
+const Select = ({
+  label,
+  data,
+  value,
+  setValue,
+  setModal,
+  isOpen,
+}: IProps) => {
   return (
-    <div className={styles["select__wrapper"]}>
+    <div
+      className={styles["select__wrapper"]}
+    >
       <div className={styles["select__wrapper--label"]}>{label}</div>
 
       <div className={styles["select__wrapper--box"]}>
@@ -37,25 +47,33 @@ const Select = ({ label, data, value, setValue, setModal, isOpen }: IProps) => {
         </div>
         {isOpen && data.length > 0 && (
           <div className={styles["select__wrapper--box--options"]}>
-            {
-              data?.map(
-                (dt: {
-                  name: string;
-                  id: number;
-                  isArchived: boolean | null;
-                }) => (
+            {data?.map(
+              (dt: {
+                id: number;
+                name: string;
+                isArchived: boolean | null;
+              }) => {
+                const selectedIds = value.id
+                  ? value.id.split(",").map((c) => c.trim())
+                  : [];
+                const isActive = selectedIds.includes(String(dt.id));
+
+                return (
                   <div
                     key={dt.id}
-                    className={styles["select__wrapper--box--option"]}
+                    className={`${styles["select__wrapper--box--option"]} ${
+                      isActive && styles["active"]
+                    }`}
                     onClick={() => {
-                      setValue(dt);
+                      setValue({ ...dt, id: String(dt.id) });
                       setModal(false);
                     }}
                   >
                     {dt.name}
                   </div>
-                )
-              )}
+                );
+              }
+            )}
           </div>
         )}
       </div>

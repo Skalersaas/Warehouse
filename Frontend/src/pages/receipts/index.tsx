@@ -78,33 +78,33 @@ const ReceiptPage = () => {
 
   const [value, setValue] = useState<{
     resourceValue: {
-      id: number;
+      id: string;
       name: string;
       isArchived: boolean | null;
     };
     unitValue: {
-      id: number;
+      id: string;
       name: string;
       isArchived: boolean | null;
     };
     numberValue: {
-      id: number;
+      id: string;
       name: string;
       isArchived: boolean | null;
     };
   }>({
     resourceValue: {
-      id: 0,
+      id: "",
       name: "",
       isArchived: false,
     },
     unitValue: {
-      id: 0,
+      id: "",
       name: "",
       isArchived: false,
     },
     numberValue: {
-      id: 0,
+      id: "",
       name: "",
       isArchived: false,
     },
@@ -161,7 +161,7 @@ const ReceiptPage = () => {
   const handleDelete = async () => {
     dispatch(setLoading(true));
     const res = await api(deleteReceipt, selectedId);
-    if (res?.data) {
+    if (res?.success) {
       const filteredData = data.filter((receipt) => receipt.id !== selectedId);
       setData(filteredData);
       successAlert("Successfully deleted!");
@@ -226,56 +226,60 @@ const ReceiptPage = () => {
 
       <div className={styles["receipts-container-search"]}>
         <div className={styles["receipts-container-search-wrapper"]}>
-          <div className={styles["receipts-container-date-time"]}>
-            <div className={styles["receipts-container-calendar-wrapper"]}>
-              <label
-                className={styles["receipts-container-calendar-wrapper-label"]}
-              >
-                Choose Period
-              </label>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "start" ? null : "start")
-                }
-                className={styles["receipts-container-calendar-button"]}
-              >
-                {formattedDate.startDate}
-              </button>
+          <div className={styles["receipts-container-search-wrapper-date"]}>
+            <label
+              className={styles["receipts-container-calendar-wrapper-label"]}
+            >
+              Choose Period
+            </label>
+            <div className={styles["receipts-container-date-time"]}>
+              <div className={styles["receipts-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(
+                      activeCalendar === "start" ? null : "start"
+                    )
+                  }
+                  className={styles["receipts-container-calendar-button"]}
+                >
+                  {formattedDate.startDate}
+                </button>
 
-              {activeCalendar === "start" && (
-                <div className={styles["receipts-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.startDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, startDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
-            </div>
+                {activeCalendar === "start" && (
+                  <div className={styles["receipts-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.startDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, startDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
 
-            <div className={styles["receipts-container-calendar-wrapper"]}>
-              <button
-                onClick={() =>
-                  setActiveCalendar(activeCalendar === "end" ? null : "end")
-                }
-                className={styles["receipts-container-calendar-button"]}
-              >
-                {formattedDate.endDate}
-              </button>
+              <div className={styles["receipts-container-calendar-wrapper"]}>
+                <button
+                  onClick={() =>
+                    setActiveCalendar(activeCalendar === "end" ? null : "end")
+                  }
+                  className={styles["receipts-container-calendar-button"]}
+                >
+                  {formattedDate.endDate}
+                </button>
 
-              {activeCalendar === "end" && (
-                <div className={styles["receipts-container-calendar-popup"]}>
-                  <CustomCalendar
-                    selectedDate={date.endDate}
-                    onSelectDate={(val) =>
-                      setDate((prev) => ({ ...prev, endDate: val }))
-                    }
-                    onClose={() => setActiveCalendar(null)}
-                  />
-                </div>
-              )}
+                {activeCalendar === "end" && (
+                  <div className={styles["receipts-container-calendar-popup"]}>
+                    <CustomCalendar
+                      selectedDate={date.endDate}
+                      onSelectDate={(val) =>
+                        setDate((prev) => ({ ...prev, endDate: val }))
+                      }
+                      onClose={() => setActiveCalendar(null)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className={styles["receipts-container-search-select-box"]}>
@@ -284,7 +288,36 @@ const ReceiptPage = () => {
               data={otherData?.numberData}
               value={value?.numberValue}
               setValue={(val) =>
-                setValue((prev) => ({ ...prev, numberValue: val }))
+                setValue((prev) => {
+                  const currentIds = prev.numberValue?.id
+                    ? prev.numberValue.id
+                        .toString()
+                        .split(",")
+                        .map((c) => c.trim())
+                    : [];
+
+                  const currentNames = prev.numberValue?.name
+                    ? prev.numberValue.name.split(",").map((c) => c.trim())
+                    : [];
+                  const exists = currentIds.includes(val.id.toString());
+                  let newIds: string[];
+                  let newNames: string[];
+                  if (exists) {
+                    newIds = currentIds.filter((c) => c !== val.id.toString());
+                    newNames = currentNames.filter((c) => c !== val.name);
+                  } else {
+                    newIds = [...currentIds, val.id.toString()];
+                    newNames = [...currentNames, val.name];
+                  }
+                  return {
+                    ...prev,
+                    numberValue: {
+                      ...val,
+                      id: newIds.join(", "),
+                      name: newNames.join(", "),
+                    },
+                  };
+                })
               }
               setModal={(isOpen) => handleModal("numberModal", isOpen)}
               isOpen={modal.numberModal}
@@ -295,7 +328,36 @@ const ReceiptPage = () => {
               data={otherData?.resourceData}
               value={value?.resourceValue}
               setValue={(val) =>
-                setValue((prev) => ({ ...prev, resourceValue: val }))
+                setValue((prev) => {
+                  const currentIds = prev.resourceValue?.id
+                    ? prev.resourceValue.id
+                        .toString()
+                        .split(",")
+                        .map((c) => c.trim())
+                    : [];
+
+                  const currentNames = prev.resourceValue?.name
+                    ? prev.resourceValue.name.split(",").map((c) => c.trim())
+                    : [];
+                  const exists = currentIds.includes(val.id.toString());
+                  let newIds: string[];
+                  let newNames: string[];
+                  if (exists) {
+                    newIds = currentIds.filter((c) => c !== val.id.toString());
+                    newNames = currentNames.filter((c) => c !== val.name);
+                  } else {
+                    newIds = [...currentIds, val.id.toString()];
+                    newNames = [...currentNames, val.name];
+                  }
+                  return {
+                    ...prev,
+                    resourceValue: {
+                      ...val,
+                      id: newIds.join(", "),
+                      name: newNames.join(", "),
+                    },
+                  };
+                })
               }
               setModal={(isOpen) => handleModal("resourceModal", isOpen)}
               isOpen={modal.resourceModal}
@@ -306,7 +368,36 @@ const ReceiptPage = () => {
               data={otherData?.unitData}
               value={value?.unitValue}
               setValue={(val) =>
-                setValue((prev) => ({ ...prev, unitValue: val }))
+                setValue((prev) => {
+                  const currentIds = prev.unitValue?.id
+                    ? prev.unitValue.id
+                        .toString()
+                        .split(",")
+                        .map((c) => c.trim())
+                    : [];
+
+                  const currentNames = prev.unitValue?.name
+                    ? prev.unitValue.name.split(",").map((c) => c.trim())
+                    : [];
+                  const exists = currentIds.includes(val.id.toString());
+                  let newIds: string[];
+                  let newNames: string[];
+                  if (exists) {
+                    newIds = currentIds.filter((c) => c !== val.id.toString());
+                    newNames = currentNames.filter((c) => c !== val.name);
+                  } else {
+                    newIds = [...currentIds, val.id.toString()];
+                    newNames = [...currentNames, val.name];
+                  }
+                  return {
+                    ...prev,
+                    unitValue: {
+                      ...val,
+                      id: newIds.join(", "),
+                      name: newNames.join(", "),
+                    },
+                  };
+                })
               }
               setModal={(isOpen) => handleModal("unitModal", isOpen)}
               isOpen={modal.unitModal}

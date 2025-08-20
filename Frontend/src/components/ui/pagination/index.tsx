@@ -11,7 +11,7 @@ interface IProps {
   totalRows: number;
   perPage: number;
   currentPage: number;
-  handlePageChange: (pageNumber: any) => void;
+  handlePageChange: (pageNumber: number) => void;
   handlePerRowsChange: (
     newPerPage?: number,
     pageNumber?: number
@@ -106,14 +106,21 @@ const Pagination = ({
 
       <div className={style["pagination__container--buttons"]}>
         <div
-          className={style["pagination__container--buttons--per"]}
-          onClick={() => changePage(currentPage - 1)}
+          className={`${style["pagination__container--buttons--per"]} ${
+            currentPage === 1 ? style["disabled"] : ""
+          }`}
+          onClick={() => currentPage > 1 && changePage(currentPage - 1)}
         >
           <ChevronLeft />
         </div>
+
         <div
-          className={style["pagination__container--buttons--per"]}
-          onClick={() => changePage(currentPage + 1)}
+          className={`${style["pagination__container--buttons--per"]} ${
+            currentPage === totalPages ? style["disabled"] : ""
+          }`}
+          onClick={() =>
+            currentPage < totalPages && changePage(currentPage + 1)
+          }
         >
           <ChevronRight />
         </div>

@@ -128,10 +128,7 @@
           display: flex;
           align-items: center;
           justify-content: space-between;
-          &--detail {
-            display: flex;
-            align-items: center;
-          }
+          gap: 12px;
           &--detail {
             display: flex;
             align-items: center;
@@ -144,6 +141,13 @@
               display: flex;
               align-items: center;
               justify-content: center;
+            }
+            &--text {
+              max-width: 60px;
+              transition: all 0.3 ease-in-out;
+              overflow: hidden;
+              white-space: nowrap;
+              text-overflow: ellipsis;
             }
           }
         }

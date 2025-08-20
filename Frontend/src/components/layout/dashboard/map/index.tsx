@@ -18,11 +18,12 @@ const TrackingDelivery = () => {
     setModalStatus((modalStatus) => !modalStatus);
   };
 
-  const fetchShipmentDocs = async (status: number) => {
+  const fetchShipmentDocs = async (status: string) => {
     dispatch(setLoading(true));
     const response = await api(getShipment, {
+      sortedField: "date",
       filters: {
-        status: String(status),
+        status: status,
       },
     });
     dispatch(setLoading(false));
@@ -31,19 +32,11 @@ const TrackingDelivery = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const loadedDocs = await fetchShipmentDocs(0);
-      const unLoadedDocs = await fetchShipmentDocs(1);
+      const loadedDocs = await fetchShipmentDocs("Signed");
+      const unLoadedDocs = await fetchShipmentDocs("Draft");
 
-      const filterLoadedDocuments = loadedDocs.sort(
-        (a: { date: string }, b: { date: string }) =>
-          a.date.localeCompare(b.date)
-      );
-      const filterUnLoadedDocuments = unLoadedDocs.sort(
-        (a: { date: string }, b: { date: string }) =>
-          a.date.localeCompare(b.date)
-      );
-      setLoadedPacks(filterLoadedDocuments);
-      setAllLoadedPacks([...filterLoadedDocuments, ...filterUnLoadedDocuments]);
+      setLoadedPacks(loadedDocs);
+      setAllLoadedPacks([...loadedDocs, ...unLoadedDocs]);
     };
 
     fetchData();
@@ -82,7 +75,7 @@ const TrackingDelivery = () => {
             Tracking Delivery
           </div>
           <div className={styles["tracking__delivery--card--title--number"]}>
-            ID#{loadedPacks?.pop()?.number}
+           #{loadedPacks?.pop()?.number}
           </div>
         </div>
 
@@ -100,20 +93,20 @@ const TrackingDelivery = () => {
                 <div
                   className={`${
                     styles["tracking__delivery--card--track--default--status"]
-                  } ${packs.status === 0 && styles["active__status"]}`}
+                  } ${packs.status === 1 && styles["active__status"]}`}
                 >
                   <div
                     className={`${
                       styles[
                         "tracking__delivery--card--track--default--status--icon"
                       ]
-                    } ${packs.status === 0 && styles["active__status--icon"]}`}
+                    } ${packs.status === 1 && styles["active__status--icon"]}`}
                   >
-                    {packs.status === 0 &&
+                    {packs.status === 1 &&
                     packs ===
                       loadedPacks?.pop() ? (
                       <Truck width={10} />
-                    ) : packs.status === 0 ? (
+                    ) : packs.status === 1 ? (
                       <Check width={10} />
                     ) : (
                       ""
@@ -124,7 +117,7 @@ const TrackingDelivery = () => {
                       styles[
                         "tracking__delivery--card--track--default--status--line"
                       ]
-                    } ${packs.status === 0 && styles["active__status--line"]}`}
+                    } ${packs.status === 1 && styles["active__status--line"]}`}
                   ></div>
                 </div>
 
@@ -147,7 +140,7 @@ const TrackingDelivery = () => {
                         ]
                       }
                     >
-                      {packs.clientName}{" "}
+                      {packs.clientName}
                     </div>
                   </div>
 

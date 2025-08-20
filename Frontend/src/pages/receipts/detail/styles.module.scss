@@ -93,7 +93,7 @@
   }
   &-calendar-popup {
     position: absolute;
-    top: 46px;
+    top: 66px;
     right: 0;
     z-index: 100;
     background-color: #fff;
@@ -103,7 +103,7 @@
   }
   &-multiple-wrapper {
     display: grid;
-    grid-template-columns: repeat(3, calc((100vw - 364px) / 3));
+    grid-template-columns: repeat(3, calc((100% - 24px) / 3));
     align-items: center;
     gap: 12px;
     @include desktop {

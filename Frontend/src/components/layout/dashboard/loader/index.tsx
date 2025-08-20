@@ -19,7 +19,7 @@ const Loader = ({ shipmentDocs }: IProps) => {
     dispatch(setLoading(true));
     const response = await api(getShipment, {
       filters: {
-        status: "0",
+        status: "Signed",
       },
     });
     setLoadPacks(response.data ?? []);

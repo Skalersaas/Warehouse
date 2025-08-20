@@ -61,7 +61,7 @@ const Sidebar = () => {
   const [currentPage, setCurrentPage] = useState<string>("");
   const [sidebarStatus, setSidebarStatus] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
-  let location = useLocation();
+  const location = useLocation();
 
   useEffect(() => {
     setCurrentPage("/" + location.pathname.split("/")[1]);
